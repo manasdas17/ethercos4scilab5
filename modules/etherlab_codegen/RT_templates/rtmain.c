@@ -307,6 +307,11 @@ void preget_mem(void) {
   int size = PREGETMEM + stackinc;
   pagesize = sysconf(_SC_PAGESIZE);
   buffer = malloc(size);
+  if(buffer == NULL) {
+  	fprintf(stderr, "Could not allocate memory of size 0x%x (%d) in preget_mem.\n", size, size);
+  	perror("malloc");
+  	exit(2);			
+  }
   for(i=0;i< size; i+=pagesize)
     {
       buffer[i]=0;

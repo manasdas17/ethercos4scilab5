@@ -208,7 +208,7 @@ static int init(scicos_block *block)
 	  else
 	    {
 	      //Dummy Entry
-	      sync_config[i].index = 0;
+	      sync_config[i].index = EC_END;
 	    }
 	  
 	  //Get Direction
