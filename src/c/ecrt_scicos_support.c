@@ -512,6 +512,10 @@ get_master(
 /* An internal function to return a domain pointer of a master with sample
  * time tid.
  * If the domain does not exist, one is created */
+/* Up till now, if no master was available, it has been reported and then 
+ * ignored. At this point that does not jive any more: we need a master. So 
+ * check for its existence and bail out if it is not there, before running into 
+ * a segmentation fault */ 
 struct ecat_domain * __init
 get_domain(
         struct ecat_master *master,
@@ -587,6 +591,11 @@ get_domain(
     }
 
     /* Let the EtherCAT Driver create a domain */
+	/* Last chance to see if the master actually exists */
+	if (!master->handle){
+		fprintf(stderr, "No Ethercat master available: aborting.\n");
+		exit(2);
+	}	
     domain->handle = ecrt_master_create_domain(master->handle);
     pr_debug("\t%p = ecrt_master_create_domain(%p)\n",
             domain->handle, master->handle);
