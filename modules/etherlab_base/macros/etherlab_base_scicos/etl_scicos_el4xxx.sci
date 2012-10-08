@@ -41,253 +41,119 @@ case 'set' then
   graphics=arg1.graphics;exprs=graphics.exprs
   model=arg1.model;
   while %t do
-   STYP=exprs(1)
-   MID=evstr(exprs(2))
-   DID=evstr(exprs(3))
-   SLA=evstr(exprs(4))
-   SLP=evstr(exprs(5))
-   SLST=evstr(exprs(6))
-   STYPID=evstr(exprs(7))
-   [ln,fun]=where(); 
-   if (fun(3) == "clickin") then
+    STYP=exprs(1)
+    MID=evstr(exprs(2))
+    DID=evstr(exprs(3))
+    SLA=evstr(exprs(4))
+    SLP=evstr(exprs(5))
+    SLST=evstr(exprs(6))
+    STYPID=evstr(exprs(7))
+    [ln,fun]=where(); 
+    if (fun(3) == "clickin") then
        [loop,STYP,STYPID,MID,DID,SLA,SLP,SLST] = set_etl_slave_el4xxx(STYP,STYPID,MID,DID,SLA,SLP,SLST)
     else
        loop = %f;
-   end
-   //SDO Config
-   //Datatype Index Subindex Value
-   slave_sdoconfig = int32([]);
-   valid_slave = %f; //Flag for Loop handling
-   slave_desc = getslavedesc('EtherCATInfo_el4xxx');
-	//TypeCode 0=Analog 1=RawScale 2=Digital
-	//Direction 1=Slave send to Master, eg EL3162,EL1004
-	//Direction 2= Master send to Slave, eg EL4102,EL2032
-	//Fullrange 2^n (Rawbitvalues)
-	//Scale in UnitValue, ex. EL4102: 10 for 0-10V (Faktor from 0-1 to Range)
-	//Offset in UnitValue, ex. EL4102: 0 for 0V
-	//Calculation:
-	//RawValue= (Input+Offset)/Scale *FullRange 
+    end
+    //SDO Config
+    //Datatype Index Subindex Value
+    slave_sdoconfig = int32([]);
+    valid_slave = %f; //Flag for Loop handling
+    slave_desc = getslavedesc('EtherCATInfo_el4xxx');
+    //TypeCode 0=Analog 1=RawScale 2=Digital
+    //Direction 1=Slave send to Master, eg EL3162,EL1004
+    //Direction 2= Master send to Slave, eg EL4102,EL2032
+    //Fullrange 2^n (Rawbitvalues)
+    //Scale in UnitValue, ex. EL4102: 10 for 0-10V (Faktor from 0-1 to Range)
+    //Offset in UnitValue, ex. EL4102: 0 for 0V
+    //Calculation:
+    //RawValue= (Input+Offset)/Scale *FullRange 
 
-   if STYP == 'EL4001' then
-   	slave_revision = hex2dec('00100000');	
-       	slave_type = 'EL4001';
-       	slave_inputs = [1 1]; //[rows input 1 colums input 1;...]
-	slave_input_types = [1] //all real [Type Input 1; Type Input 2]
-	slave_outputs = [];
-	slave_output_types = [];
-   	//Clear Channel List
-   	clear channel
-	channel(1).index = hex2dec('7000');
-	channel(1).subindex = hex2dec('17');
-	channel(1).vectorlength = 1;
-	channel(1).valuetype = 'si_uint16_T';
-	channel(1).typecode = 'analog';
-	channel(1).direction = 'setvalues';
-	channel(1).channelno = 1;
-	channel(1).scale = 10.0;
-	channel(1).offset = 0.0;
-	channel(1).fullrange = 12;
-	[slave_pdomapping,slave_pdomapping_scale,valid_mapping]=build_mapstruct(channel);
+    data_stype   =   'EL'+ string([4001      4002      4004      4008      4102      4132      4012      4022      4032    ]);  // ['EL4001' 'EL4002' etc.
+    data_slavrev = hex2dec(string([00100000  00100000  00100000  00100000  00000000  00000000  00100000  00100000  00100000])); // slave revision
+    data_nchi    =                [1         2         4         8         2         2         2         2         2       ];   // number of channels on device
+    data_index   = hex2dec(string([7000      7000      7000      7000      6411      6411      7000      7000      7000    ]));  // data index for first channel
+    data_subindx = hex2dec(string([17        17        17        17        1         1         17        17        17      ]));  // subindex for first channel
+    data_indxadd = hex2dec(string([10        10        10        10        0         0         10        10        10      ]));  // index adder for each next channel
+    data_sbidxad = hex2dec(string([0         0         0         0         1         1         0         0         0       ]));  // subindex adder for each next channel
+    data_scale   =                [10        10        10        10        10        10        20        16        10      ];   //? Correct?
+    data_offset  =                [0         0         0         0         0         0         0         -4        0       ];   //? Correct?
+    data_fulrang =                [12        12        12        12        15        15        12        12        12      ];   // full range at 2^n
 
-   end
+// TODO: The data above is extractable from the xml files and probably out of date. 
+// There should be a way to import a new set of xml files and configure accordingly without rebuilding. Right?
 
-   if STYP == 'EL4002' then
-   	slave_revision = hex2dec('00100000');	
-       	slave_type = 'EL4002';
-       	slave_inputs = [1 1; 1 1]; //[rows input 1 colums input 1;...]
-	slave_input_types = [1; 1] //all real [Type Input 1; Type Input 2]
-	slave_outputs = [];
-	slave_output_types = [];
-   	//Clear Channel List
-   	clear channel
-	channel(1).index = hex2dec('7000');
-	channel(1).subindex = hex2dec('17');
-	channel(1).vectorlength = 1;
-	channel(1).valuetype = 'si_uint16_T';
-	channel(1).typecode = 'analog';
-	channel(1).direction = 'setvalues';
-	channel(1).channelno = 1;
-	channel(1).scale = 10.0;
-	channel(1).offset = 0.0;
-	channel(1).fullrange = 12;
-	channel(2) = channel(1);
-	channel(2).index = hex2dec('7010');
-	channel(2).channelno = 2;
-	[slave_pdomapping,slave_pdomapping_scale,valid_mapping]=build_mapstruct(channel);
-   end
+    dvnum = find(data_stype == STYP);           // returns index of requested STYPE in data_stype
+    if isempty(dvnum) then                      // Should never happen.
+        disp('No valid device type selected');
+        break;
+    end;
+    slave_revision = data_slavrev(dvnum);   
+    slave_type = data_stype(dvnum);
+    
+    clear channel;
+    for chi = 1:(data_nchi(dvnum))
+      channel(chi).index        = data_index(dvnum)   + (chi-1)*data_indxadd(dvnum);
+      channel(chi).subindex     = data_subindx(dvnum) + (chi-1)*data_sbidxad(dvnum);
+      channel(chi).vectorlength = 1;
+      channel(chi).valuetype    = 'si_uint16_T';
+      channel(chi).typecode     = 'analog';
+      channel(chi).direction    = 'setvalues';
+      channel(chi).channelno    = chi;
+      channel(chi).scale        = data_scale(dvnum);
+      channel(chi).offset       = data_offset(dvnum);
+      channel(chi).fullrange    = data_fulrang(dvnum);
+    end
+    [slave_pdomapping,slave_pdomapping_scale,valid_mapping]=build_mapstruct(channel);
+    
+    slave_inputs       = ones(data_nchi(dvnum), 2);      // Creates chi columns of a single slave_inputs row
+    slave_input_types  = ones(data_nchi(dvnum), 1);
+    slave_outputs = [];
+    slave_output_types = [];
 
-   if STYP == 'EL4004' then
-   	slave_revision = hex2dec('00100000');	
-       	slave_type = 'EL4004';
-       	slave_inputs = [1 1; 1 1; 1 1; 1 1]; //[rows input 1 colums input 1;...]
-	slave_input_types = [1; 1; 1; 1] //all real [Type Input 1; Type Input 2]
-	slave_outputs = [];
-	slave_output_types = [];
-   	//Clear Channel List
-   	clear channel
-	channel(1).index = hex2dec('7000');
-	channel(1).subindex = hex2dec('17');
-	channel(1).vectorlength = 1;
-	channel(1).valuetype = 'si_uint16_T';
-	channel(1).typecode = 'analog';
-	channel(1).direction = 'setvalues';
-	channel(1).channelno = 1;
-	channel(1).scale = 10.0;
-	channel(1).offset = 0.0;
-	channel(1).fullrange = 12;
-	channel(2) = channel(1);
-	channel(2).index = hex2dec('7010');
-	channel(2).channelno = 2;
-	channel(3) = channel(1);
-	channel(3).index = hex2dec('7020');
-	channel(3).channelno = 3;
-	channel(4) = channel(1);
-	channel(4).index = hex2dec('7030');
-	channel(4).channelno = 4;
-	[slave_pdomapping,slave_pdomapping_scale,valid_mapping]=build_mapstruct(channel);
+    if valid_mapping < 0 then
+      disp('No valid Mapping Configuration');
+    end;
 
-   end
-
-   if STYP == 'EL4008' then
-   	slave_revision = hex2dec('00100000');	
-       	slave_type = 'EL4008';
-       	slave_inputs = [1 1; 1 1; 1 1; 1 1; 1 1; 1 1; 1 1; 1 1]; //[rows input 1 colums input 1;...]
-	slave_input_types = [1; 1; 1; 1; 1; 1; 1; 1] //all real [Type Input 1; Type Input 2]
-	slave_outputs = [];
-	slave_output_types = [];
-   	//Clear Channel List
-   	clear channel
-	channel(1).index = hex2dec('7000');
-	channel(1).subindex = hex2dec('17');
-	channel(1).vectorlength = 1;
-	channel(1).valuetype = 'si_uint16_T';
-	channel(1).typecode = 'analog';
-	channel(1).direction = 'setvalues';
-	channel(1).channelno = 1;
-	channel(1).scale = 10.0;
-	channel(1).offset = 0.0;
-	channel(1).fullrange = 12;
-	channel(2) = channel(1);
-	channel(2).index = hex2dec('7010');
-	channel(2).channelno = 2;
-	channel(3) = channel(1);
-	channel(3).index = hex2dec('7020');
-	channel(3).channelno = 3;
-	channel(4) = channel(1);
-	channel(4).index = hex2dec('7030');
-	channel(4).channelno = 4;
-	channel(5) = channel(1);
-	channel(5).index = hex2dec('7040');
-	channel(5).channelno = 5;
-	channel(6) = channel(1);
-	channel(6).index = hex2dec('7050');
-	channel(6).channelno = 6;
-	channel(7) = channel(1);
-	channel(7).index = hex2dec('7060');
-	channel(7).channelno = 7;
-	channel(8) = channel(1);
-	channel(8).index = hex2dec('7070');
-	channel(8).channelno = 8;
-	[slave_pdomapping,slave_pdomapping_scale,valid_mapping]=build_mapstruct(channel);
-
-   end
-
-   if STYP == 'EL4102' then
-   	slave_revision = hex2dec('00000000');	
-       	slave_type = 'EL4102';
-       	slave_inputs = [1 1; 1 1]; //[rows input 1 colums input 1;...]
-	slave_input_types = [1;1] //all real [Type Input 1; Type Input 2]
-	slave_outputs = [];
-	slave_output_types = [];
-   	//Clear Channel List
-   	clear channel
-	channel(1).index = hex2dec('6411');
-	channel(1).subindex = hex2dec('1');
-	channel(1).vectorlength = 1;
-	channel(1).valuetype = 'si_uint16_T';
-	channel(1).typecode = 'analog';
-	channel(1).direction = 'setvalues';
-	channel(1).channelno = 1;
-	channel(1).scale = 10.0;
-	channel(1).offset = 0.0;
-	channel(1).fullrange = 15;
-	channel(2) = channel(1);
-	channel(2).subindex = hex2dec('2');
-	channel(2).channelno = 2;
-	[slave_pdomapping,slave_pdomapping_scale,valid_mapping]=build_mapstruct(channel);
-
-   end
-
-   if STYP == 'EL4132' then
-   	slave_revision = hex2dec('00000000');	
-       	slave_type = 'EL4132';
-       	slave_inputs = [1 1; 1 1]; //[rows input 1 colums input 1;...]
-	slave_input_types = [1;1] //all real [Type Input 1; Type Input 2]
-	slave_outputs = [];
-	slave_output_types = [];
-   	//Clear Channel List
-   	clear channel
-	channel(1).index = hex2dec('6411');
-	channel(1).subindex = hex2dec('1');
-	channel(1).vectorlength = 1;
-	channel(1).valuetype = 'si_sint16_T';
-	channel(1).typecode = 'analog';
-	channel(1).direction = 'setvalues';
-	channel(1).channelno = 1;
-	channel(1).scale = 10.0;
-	channel(1).offset = 0.0;
-	channel(1).fullrange = 15;
-	channel(2) = channel(1);
-	channel(2).subindex = hex2dec('2');
-	channel(2).channelno = 2;
-	[slave_pdomapping,slave_pdomapping_scale,valid_mapping]=build_mapstruct(channel);
-
-   end
-
-   if valid_mapping < 0 then
-	disp('No valid Mapping Configuration');
-   end;
-
-   slave_typeid = getslavedesc_checkslave(slave_desc,slave_type,slave_revision);
-   if slave_typeid > 0 then
-   	slave_config= getslavedesc_getconfig(slave_desc,slave_typeid);
-	[slave_smconfig,slave_pdoconfig,slave_pdoentry,valid_slave] = getslavedesc_buildopar(slave_config,0,0); //Default Configurartion
-   else
-	disp('Can not find valid Configuration.');
-   end
+    slave_typeid = getslavedesc_checkslave(slave_desc,slave_type,slave_revision);
+    if slave_typeid > 0 then
+      slave_config= getslavedesc_getconfig(slave_desc,slave_typeid);
+      [slave_smconfig,slave_pdoconfig,slave_pdoentry,valid_slave] = getslavedesc_buildopar(slave_config,0,0); //Default Configurartion
+    else
+      disp('Can not find valid Configuration.');
+    end
 	
-   if isempty(slave_inputs) then
-	slave_input_list = list();
-   else
-	slave_input_list = list(slave_inputs,slave_input_types);
-   end   
-   if isempty(slave_outputs) then
-	slave_output_list = list();
-   else
-	slave_output_list = list(slave_outputs,slave_output_types);
-   end   
+    if isempty(slave_inputs) then
+      slave_input_list = list();
+    else
+      slave_input_list = list(slave_inputs,slave_input_types);
+    end   
+    if isempty(slave_outputs) then
+      slave_output_list = list();
+    else
+      slave_output_list = list(slave_outputs,slave_output_types);
+    end   
 
-   [model,graphics,ok]=set_io(model,graphics,slave_input_list,slave_output_list,[1],[])
-   if and([~loop ok valid_slave]) then
-     exprs(1)=STYP;
-     exprs(2)=sci2exp(MID);
-     exprs(3)=sci2exp(DID);
-     exprs(4)=sci2exp(SLA);
-     exprs(5)=sci2exp(SLP);
-     exprs(6)=sci2exp(SLST);
-     exprs(7)=sci2exp(STYPID);
-     graphics.exprs=exprs;
-     DEBUG=1; //DEBUG =1 => Debug the calculation function 
-     model.ipar=[DEBUG;MID;DID;SLA;SLP];  //transmit integer variables to the c block 
-     model.rpar=[];       		 //transmit double variables to the c block
-     slave_vendor = getslavedesc_vendor(slave_desc);
-     slave_productcode = getslavedesc_productcode(slave_desc,slave_typeid);
-     slave_generic = int32([slave_vendor; slave_productcode]);
-     model.opar = list(slave_smconfig,slave_pdoconfig,slave_pdoentry,slave_sdoconfig,slave_pdomapping,slave_generic,slave_pdomapping_scale);
-     model.dstate=[1];
-     model.dep_ut=[%t, %f]
-     x.graphics=graphics;x.model=model
-     break
+    [model,graphics,ok]=set_io(model,graphics,slave_input_list,slave_output_list,[1],[])
+    if and([~loop ok valid_slave]) then
+      exprs(1)=STYP;
+      exprs(2)=sci2exp(MID);
+      exprs(3)=sci2exp(DID);
+      exprs(4)=sci2exp(SLA);
+      exprs(5)=sci2exp(SLP);
+      exprs(6)=sci2exp(SLST);
+      exprs(7)=sci2exp(STYPID);
+      graphics.exprs=exprs;
+      DEBUG=1; //DEBUG =1 => Debug the calculation function 
+      model.ipar=[DEBUG;MID;DID;SLA;SLP];  //transmit integer variables to the c block 
+      model.rpar=[];       		 //transmit double variables to the c block
+      slave_vendor = getslavedesc_vendor(slave_desc);
+      slave_productcode = getslavedesc_productcode(slave_desc,slave_typeid);
+      slave_generic = int32([slave_vendor; slave_productcode]);
+      model.opar = list(slave_smconfig,slave_pdoconfig,slave_pdoentry,slave_sdoconfig,slave_pdomapping,slave_generic,slave_pdomapping_scale);
+      model.dstate=[1];
+      model.dep_ut=[%t, %f]
+      x.graphics=graphics;x.model=model
+      break
     end
   end	
 case 'define' then
@@ -343,9 +209,9 @@ case 'define' then
   channel(2).channelno = 2;
   [slave_pdomapping,slave_pdomapping_scale,valid_mapping]=build_mapstruct(channel);
 
-   if valid_mapping < 0 then
-	disp('No valid Mapping Configuration');
-   end;
+  if valid_mapping < 0 then
+    disp('No valid Mapping Configuration');
+  end;
 
   slave_generic = int32([slave_vendor; slave_productcode]);
   model.opar = list(slave_smconfig,slave_pdoconfig,slave_pdoentry,slave_sdoconfig,slave_pdomapping,slave_generic,slave_pdomapping_scale);

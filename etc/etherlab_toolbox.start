@@ -44,6 +44,8 @@ end
   listFailed      = list(); // list of failed loads
   loadDetails  = '';     // details about every module
 
+ncl = lines();      // save current settings
+lines(0);           // make the pager go away while loading
 
 chdir(ethercos_tlbx);
 if ( isdir('modules') ) then
@@ -94,6 +96,7 @@ chdir(current_dir_main);
                 printf('\n')
                 printf('   ------------------------------------------------------------------\n')
 
+lines(ncl(2));       // restore paging action
 
 // ====================================================================
 clear warning_mode;
@@ -108,4 +111,5 @@ clear nbPassed;
 clear nbFailed;
 clear nbTests;
 clear loadDetails;
+clear ncl;
 // ====================================================================

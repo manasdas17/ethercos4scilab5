@@ -28,8 +28,6 @@
 # *****************************************************************************/
 
 
-
-
 use IO::File;
 use XML::LibXML;
 use strict;
@@ -68,15 +66,13 @@ sub getnum
     $! = 0;
     my($num, $unparsed) = strtod($str);
     if (($str eq '') || ($unparsed != 0) || $!) {
-	return undef;
+        return undef;
     } else {
-	return $num;
+        return $num;
     }
 }
 
 sub is_numeric { defined getnum($_[0]) }
-
-
 
 sub dump_nodes
 {
@@ -87,77 +83,81 @@ sub dump_nodes
     my $redname;
     my $attr;
     my $subnode;
-    if($node->nodeName eq 'text')
+    if($node->nodeName eq '#text' or $node->nodeName eq '#cdata-section')
     {
-	$replacestring = $node->parentNode->nodePath();
-	$replacestring =~ s/\//./g;
-	$replacestring =~ s/\[/\(/g;
-	$replacestring =~ s/\]/\)/g;
-	$replacestring =~ s/^\.//;
-	$redname = $node->nodePath();
-	$redname =~ s/\/text\(\)//;
+      $replacestring = $node->parentNode->nodePath();     # Get owner of the text
+      $replacestring =~ s/\//./g;                         # replace all"/" with .
+      $replacestring =~ s/\[/\(/g;                        # replace all "[" with "("
+      $replacestring =~ s/\]/\)/g;                        # right
+      $replacestring =~ s/^\.//;                          # remove all leading dots
+      $redname = $node->nodePath();                       # path of the text node
+      $redname =~ s/\/text\(\)//;                         # remove "/text()"
 
-	if(($redname eq $node->parentNode->nodePath()) && ($node->parentNode->hasAttributes))
-	{
-	    $replacestring = $replacestring . ".TextContent";
-	}
-	if($node->textContent =~/[a-zA-Z0-9\#]+/)
-	{
-	    if(&is_numeric($node->textContent))
-	    {
-		print $outputfilehandle $replacestring . "=" . $node->textContent . ";\n";
-	    }
-	    else
-	    {
-		if($node->textContent =~/\#x/) #Hex-String
-		{
-		    $replacevalue = $node->textContent;
-		    $replacevalue =~ s/\#x//;
-		    print $outputfilehandle $replacestring . "=hex2dec(\'" . $replacevalue . "\');\n";
-		}
-		else
-		{
-		    print $outputfilehandle $replacestring ."=\'" . $node->textContent ."\';\n";
-		}
-	    }
-	}
+      # In cases where the node has text only, the nodename serves as the identifier
+      # In cases where there are only attributes, the nodename is not a leaf identifier
+      # in cases where we have both, we invent an attribute "TextContent" that holds the text
+      if(($redname eq $node->parentNode->nodePath()) && ($node->parentNode->hasAttributes))
+      {
+          $replacestring = $replacestring . ".TextContent";
+      }
+
+      # Now we can analyze the value of the item.
+      if($node->textContent =~/[a-zA-Z0-9\#]+/)           # if we have one or more alphanumerical or hash characters
+      {
+          if(&is_numeric($node->textContent))
+          {
+              print $outputfilehandle $replacestring . "=" . $node->textContent . ";\n";
+          }
+          else
+          {
+              if($node->textContent =~/\#x/)              #Hex-String
+              {
+                  $replacevalue = $node->textContent;
+                  $replacevalue =~ s/\#x//;               # Strip the hex leader "#x"
+                  print $outputfilehandle $replacestring . "=hex2dec(\'" . $replacevalue . "\');\n";
+              }
+              else
+              {
+                  print $outputfilehandle $replacestring ."=\'" . $node->textContent ."\';\n";
+              }
+          }
+      }
     }
 
     if ($node->hasAttributes) 
     {
-	foreach $attr ( $node->attributes ) {
-	    $replacestring = $node->nodePath();
-	    $replacestring =~ s/\//./g;
-	    $replacestring =~ s/\[/\(/g;
-	    $replacestring =~ s/\]/\)/g;
-	    $replacestring =~ s/^\.//;
-	    if(&is_numeric($attr->value))
-	    {
-		print $outputfilehandle $replacestring . "." . $attr->name . "=" . $attr->value . ";\n";
-	    }
-	    else
-	    {
-		if($attr->value =~/\#x/) #Hex-String
-		{
-		    $replacevalue = $attr->value;
-		    $replacevalue =~ s/\#x//;
-		    print $outputfilehandle $replacestring . "." . $attr->name . "=hex2dec(\'" . $replacevalue . "\');\n";
-		}
-		else
-		{
-		    print $outputfilehandle $replacestring ."." . $attr->name . "=\'" . $attr->value ."\';\n";
-		}
-	    }
-	}
+        foreach $attr ( $node->attributes ) 
+        {
+            $replacestring = $node->nodePath();
+            $replacestring =~ s/\//./g;
+            $replacestring =~ s/\[/\(/g;
+            $replacestring =~ s/\]/\)/g;
+            $replacestring =~ s/^\.//;
+            if(&is_numeric($attr->value))
+            {
+                print $outputfilehandle $replacestring . "." . $attr->name . "=" . $attr->value . ";\n";
+            }
+            else
+            {
+                if($attr->value =~/\#x/) #Hex-String
+                {
+                    $replacevalue = $attr->value;
+                    $replacevalue =~ s/\#x//;
+                    print $outputfilehandle $replacestring . "." . $attr->name . "=hex2dec(\'" . $replacevalue . "\');\n";
+                }
+                else
+                {
+                    print $outputfilehandle $replacestring ."." . $attr->name . "=\'" . $attr->value ."\';\n";
+                }
+            }
+        }
     }
+
     foreach $subnode ($node->getChildnodes)
     {
-	&dump_nodes($subnode,$outputfilehandle);
+        &dump_nodes($subnode,$outputfilehandle);
     }
-    
 }
-
-
 
 
 my %opts = (
@@ -171,14 +171,14 @@ getopts('hf:', \%opts);
 &dohelp if $opts{'h'};
 
 $inputfile=$opts{'f'};
-$outputfile = 'test.xml';
+$outputfile = $inputfile;
 $datfile = $outputfile;
 $outputfile =~s/ //g;
 $outputfile =~s/\.xml/\.sce/;
 $datfile =~s/\.xml/\.dat/;
 
 # Erzeuge ein Parser Objekt
-my $parser = XML::LibXML->new(validation => 1);
+my $parser = XML::LibXML->new(validation => 0);
 # Parse die XML Datei, die der Anwender als Parameter uebergibt
 my $doc = $parser->parse_file($inputfile);
 

@@ -73,7 +73,7 @@ function [pdo_map,pdo_map_scale,valid] = build_mapstruct(channelinfo)
      end;
    
      direction = -1;
-     select channelinfo(1).direction
+     select channelinfo(i).direction
      case 'getvalues' then
         direction = 1;
      case 'setvalues' then

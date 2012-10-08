@@ -53,8 +53,15 @@ try
 		  return;
 		end
 	case '4.3' then
-		shellstr = 'ln -s '+module_dir+'libs/4.3 '+module_dir+'libs_codegen'; 
-	    	rcode = unix(shellstr);
+		// The link creation at 'make'ing twice fails with a shell message, breaks the make process but 
+		// does not give the rcode!=0 message. Removing this link remedies this.
+		shellstr = 'rm -f '+module_dir+'libs/4.3/4.3'
+		rcode = unix(shellstr)
+		if rcode != 0 then 
+		  disp('Cannot remove link '+module_dir+'libs/4.3/4.3');
+		end
+		shellstr = 'ln -s '+module_dir+'libs/4.3 '+module_dir+'libs_codegen';
+    	rcode = unix(shellstr);
 		if rcode != 0 then
 		  disp('Macro Initialisation not successfull!')
 		  return;
@@ -66,8 +73,6 @@ try
 catch 
  disp('Failure Handling')
 end 
-
-
 
 
 try
