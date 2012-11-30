@@ -14,11 +14,10 @@
 
   <refnamediv>
     <refname>etl_scicos_el32xx</refname>
-
     <refpurpose>etl_scicos_el32xx</refpurpose>
   </refnamediv>
 
- <refsection>
+  <refsection>
     <title>Parameters</title>
     <variablelist>
       <varlistentry>
@@ -26,7 +25,7 @@
         <listitem>
           <para>
 	  Master-ID of the Master Interface. Has to be zero or an positive integer.
-         </para>
+          </para>
         </listitem>
       </varlistentry>
       <varlistentry>
@@ -37,7 +36,7 @@
          </para>
         </listitem>
       </varlistentry>
-            <varlistentry>
+      <varlistentry>
         <term>Slave Alias (optional)</term>
         <listitem>
           <para>
@@ -45,7 +44,7 @@
          </para>
         </listitem>
       </varlistentry>
-            <varlistentry>
+      <varlistentry>
         <term>Slave Position</term>
         <listitem>
           <para>
@@ -61,6 +60,7 @@
          </para>
         </listitem>
       </varlistentry>
+      <varlistentry>
         <term>Other Setting</term>
         <listitem>
           <para>
@@ -72,14 +72,10 @@
   </refsection>
   <refsection>
     <title>Description</title>
-
     <para> This Block represents an EL32xx Beckhoff EtherCAT Slave. You can access Fieldbus IO during Simulation and after Codegeneration in standalone running mode </para>
   </refsection>
-
-
   <refsection>
     <title>Authors</title>
-
     <simplelist type="vert">
       <member>Andreas Stewering-Bone, IgH Essen</member>
     </simplelist>

@@ -41,54 +41,58 @@ function [smconfig, pdoconfig, entryconfig, rvalue] = getslavedesc_buildopar(sla
      // opar(5) Sdo Configuration integer matrix
      // [ Sdoindex, Sdosubindex, bitlen, value;....]
  
+     //mprintf("getslavedesc_buildopar(%d, %d)  building ...\n", txid, rxid)
      rvalue = %t
      smcount = max(size(slave_config.Sm));
      pdoconfig = [];
      entryconfig = [];
      smconfig = zeros(3,smcount);
      for i=1:smcount
-      for j=1:2
-        if isequal(j,1) then
-          id = txid; //Slave send to Master
-        end
-        if isequal(j,2) then
-          id = rxid; //Master send to Slave
-        end
-        valid_config = %f
-        if isequal(slave_config.Sm(i).direction ,j) then //TxPdo
-            if isequal(id,0) then //default config
-              if ~isempty(slave_config.Sm(i).default) then
-                pdocount = max(size(slave_config.Sm(i).default.Pdo))
-                Pdo = slave_config.Sm(i).default.Pdo; 
-                //disp('Select Default Configuration')
-                valid_config = %t;
-              end
-            end
+       for j=1:2
+         //mprintf("  Sm #%d, direction #%d.\n", i, j);
+         if isequal(j,1) then
+           id = txid; //Slave send to Master
+         end
+         if isequal(j,2) then
+           id = rxid; //Master send to Slave
+         end
+         valid_config = %f
+         if isequal(slave_config.Sm(i).direction ,j) then //TxPdo
+           //disp(slave_config.Sm(i).default);
+           if isequal(id,0) then //default config
+             if ~isempty(slave_config.Sm(i).default) then
+               pdocount = max(size(slave_config.Sm(i).default.Pdo))
+               Pdo = slave_config.Sm(i).default.Pdo; 
+               //disp('Select Default Configuration')
+               valid_config = %t;
+             end
+           end
            if id > 0 then
-              if ~isempty(slave_config.Sm(i).alternativ(id)) then
-                pdocount = max(size(slave_config.Sm(i).alternativ(id).Pdo))
-                Pdo = slave_config.Sm(i).alternativ(id).Pdo; 
-                //disp('Select Alternativ Configuration')
-                valid_config = %t;
-              end
+             if ~isempty(slave_config.Sm(i).alternativ(id)) then
+               pdocount = max(size(slave_config.Sm(i).alternativ(id).Pdo))
+               Pdo = slave_config.Sm(i).alternativ(id).Pdo; 
+               //disp('Select Alternativ Configuration')
+               valid_config = %t;
+             end
            end
+         end
+         if valid_config then
+           //mprintf("PdoCount = %s\n", string(pdocount));
+           for j=1:pdocount
+             entrycount = size(Pdo(j).Entrys);
+             pdoconfig = cat(1,pdoconfig,[Pdo(j).index entrycount(1)]);
+             for k=1:entrycount(1)
+               entryconfig = cat(1,entryconfig,Pdo(j).Entrys(k,:));
+             end
+           end
+           smconfig(:,i)=[pdocount; slave_config.Sm(i).index; slave_config.Sm(i).direction]
+         end  
+       end
      end
-     if valid_config then
-        //disp(['PdoCount = '+string(pdocount)])
-        for j=1:pdocount
-           entrycount = size(Pdo(j).Entrys);
-           pdoconfig = cat(1,pdoconfig,[Pdo(j).index entrycount(1)]);
-           for k=1:entrycount(1)
-              entryconfig = cat(1,entryconfig,Pdo(j).Entrys(k,:));
-           end
-        end
-        smconfig(:,i)=[pdocount; slave_config.Sm(i).index; slave_config.Sm(i).direction]
-     end  
-    end
-   end
   
  
      smconfig = int32(smconfig);
      pdoconfig = int32(pdoconfig');
      entryconfig = int32(entryconfig');
+     //mprintf("getslavedesc_buildopar(%d, %d) done.\n", txid, rxid)
 endfunction

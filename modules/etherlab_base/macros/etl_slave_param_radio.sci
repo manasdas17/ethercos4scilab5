@@ -20,7 +20,7 @@
 function [configs] = etl_slave_param_radio(configs,vname,label,value,varargin)
   [lhs,rhs]=argn(0);
   if rhs>=1 then
-    disp(varargin)
+    //disp(varargin)
   else //Failure
     return;
   end

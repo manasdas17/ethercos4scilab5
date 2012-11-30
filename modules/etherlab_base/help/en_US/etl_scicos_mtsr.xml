@@ -37,7 +37,7 @@
          </para>
         </listitem>
       </varlistentry>
-            <varlistentry>
+      <varlistentry>
         <term>Slave Alias (optional)</term>
         <listitem>
           <para>
@@ -45,7 +45,7 @@
          </para>
         </listitem>
       </varlistentry>
-            <varlistentry>
+      <varlistentry>
         <term>Slave Position</term>
         <listitem>
           <para>
@@ -61,6 +61,7 @@
          </para>
         </listitem>
       </varlistentry>
+      <varlistentry>
         <term>Other Setting</term>
         <listitem>
           <para>

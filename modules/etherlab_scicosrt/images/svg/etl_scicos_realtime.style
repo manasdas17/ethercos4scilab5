@@ -1,0 +1,29 @@
+// Style file for the ethercos blocks.
+// This file determines what is shown on an instantiated block.
+// If this file is not present for a certain block (i.e. interface file with same name.sci)
+// then the plot function of the interface file is used to derive a fixed figure, using the 
+// blocks gr_i string (job 'define') that does not respond to configuration changes.
+
+// each line is as follows:
+//  - leading or trailing whitespace is ignored
+//  - if it starts with // the entire line is ignored
+//  - other lines are fieldname=value pairs
+//  - Spaces around the = are important
+//  - The first '=' symbol ends the fieldname
+//  - The value starts after the first '=' and ends on the first semicolon (';') after that.
+
+// The text to display:
+//   - %3$s refers to the third item in the graphics.exprs list
+//   - multiline labels can be created using '<BR>' as line breaker
+//   - no quotation marks needed, unless you want them visible :-)
+displayedLabel=<TABLE><COL><COL><TR><TD ROWSPAN=3><P><FONT STYLE="font-size: 16pt">RTSYNC</FONT></P></TD><TD><P ALIGN=LEFT><FONT STYLE="font-size: 11pt">Time</FONT></P></TD></TR><TR VALIGN=TOP><TD><P ALIGN=LEFT><FONT STYLE="font-size: 11pt">TA</FONT></P></TD></TR><TR VALIGN=TOP><TD><P ALIGN=LEFT><FONT STYLE="font-size: 11pt">Buffer</FONT></P></TD></TR></TABLE>;
+
+// You need this or no label will be shown.
+noLabel=0;
+
+// You need this or your label will be placed below the block instead of inside it
+verticalLabelPosition=middle;
+
+// If you omit this, a multi-line label will be left aligned.
+// Can safely be omitted on a single line label
+align=center;

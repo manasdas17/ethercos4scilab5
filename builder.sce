@@ -28,8 +28,6 @@ if(setenv('ETLPATH',toolbox_dir)==%f) then
   return;
 end
 
-
-
 //=====================================================================
 //Check for Host System
 if MSDOS then
@@ -38,59 +36,51 @@ if MSDOS then
 end;
 
 //=====================================================================
-//Set Release dependend Header Files
+//Set Release dependent Header Files
 try
   [version,modules]=getversion();
-  disp('')
-  select version
-	case 'scilab-4.1.2' then
-		shellstr = 'cp -f '+toolbox_dir+'includes/scicos_block4_12.h '+toolbox_dir+'includes/scicos_block4.h';
-	    	rcode = unix(shellstr);
-		if rcode != 0 then
-		  disp('Header Initialisation not successfull!')
-		  return;
-		end
-	case 'Scilab-Gtk-2007-12-07' then
-		shellstr = 'cp -f '+toolbox_dir+'includes/scicos_block4_12.h '+toolbox_dir+'includes/scicos_block4.h';
-	    	rcode = unix(shellstr);
-		if rcode != 0 then
-		  disp('Header Initialisation not successfull!')
-		  return;
-		end
-	case '4.3' then
-		shellstr = 'cp -f '+toolbox_dir+'includes/scicos_block4_3.h '+toolbox_dir+'includes/scicos_block4.h';
-	    	rcode = unix(shellstr);
-		if rcode != 0 then
-		  disp('Header Initialisation not successfull!')
-		  return;
-		end
-	else
-	  disp('Scilab Version not supported');
-	  return;	
+  mprintf("\n");
+  [from, to] = regexp(version, '/^[Ss]cilab-/');
+  if from then
+      version = part(version, to+1:length(version));    // strip leading '[sS]ilab-'
   end;
+  if find(version == ['4.3']) then
+    includefn = "scicos_block4_3.h";
+  elseif find(version == ['4.1.2', 'Gtk-2007-12-07']) then
+    includefn = "scicos_block4_12.h";
+  elseif find(version == ['5.3.3']) then
+    includefn = "scicos_block4_" + version + ".h";
+  else
+    disp("Scilab Version ''" + version + "'' not supported");
+    return;	
+  end;
+  // Copy the rigth include file to a local place
+  shellstr = 'cp -f ' + toolbox_dir + 'includes/' + includefn + ' ' + toolbox_dir + 'includes/scicos_block4.h';
+  rcode = unix(shellstr);
+  if rcode != 0 then
+    disp('Header Initialisation not successfull!')
+    return;
+  end
 catch 
   disp('Failure Handling')
 end 
 
-
-
-
 // ====================================================================
 try
-  getversion('scilab');
+  getversion('scilab');   // Fails with version < 5
   if ~with_module('development_tools') then
     error(msprintf(gettext('%s module not installed."),'development_tools'));
   end
-catch
- try
+end
+try
   chdir('macros');
-   exec('buildmacros.sce');
-   exec('loadmacros.sce');
-   chdir(toolbox_dir);
+  exec('buildmacros.sce');
+  exec('loadmacros.sce');
+  chdir(toolbox_dir);
 catch
   error('macros dir not available!');
 end
-end
+
 // ====================================================================
 TOOLBOX_NAME = 'etherlab_toolbox';
 TOOLBOX_TITLE = 'EtherCos Toolbox for scilab';
@@ -107,8 +97,10 @@ chdir(toolbox_dir);
    listSuccessful($+1)='ethercos main';
    status=sprintf(' |   %s                         ',TOOLBOX_NAME);
  catch
+    [str,n,line,func]=lasterror();
     status=sprintf(' !                         %s ',TOOLBOX_NAME);
-    printf(' %s  could not be build!',TOOLBOX_NAME);
+    printf(' %s  could not be built!',TOOLBOX_NAME);
+    mprintf("\nError message: %s\nOn line %d in function %s\n", str, n, func);
     listFailed($+1)=TOOLBOX_NAME;
  end
 // ====================================================================
@@ -116,53 +108,51 @@ chdir(toolbox_dir);
 
 chdir(toolbox_dir);
 if ( isdir('modules') ) then
- disp('Build modules');
- chdir('modules');
- module=dir();
- start=1;
- while(start<length(module.isdir)) do
+  disp('Build modules');
+  chdir('modules');
+  module=dir();
+  start=1;
+  while(start<length(module.isdir)) do
  
   for i=start:length(module.isdir)
-	 start=i+1;
-        if (module.isdir(i)) then
-                if (fileinfo(module.name(i)+'/builder.sce')~=[]) then
-// 		    try
-                        disp('Building module: '+module.name(i));
-                        exec(module.name(i)+'/builder.sce',-1);
-                        chdir(toolbox_dir+'modules');
-// 		    catch
-// 			chdir(toolbox_dir+'modules');
-//     			disp(module.name(start-1)+' could not build!');
-//     			listFailed($+1)=module.name(start-1);
-// 		    end
-                end
-        end
-   end
-
-end
+	  start=i+1;
+    if (module.isdir(i)) then
+      if (fileinfo(module.name(i)+'/builder.sce')~=[]) then
+//	    try
+          disp('Building module: '+module.name(i));
+          exec(module.name(i)+'/builder.sce',-1);
+          chdir(toolbox_dir+'modules');
+//	    catch
+//		    chdir(toolbox_dir+'modules');
+//   			disp(module.name(start-1)+' could not build!');
+//   			listFailed($+1)=module.name(start-1);
+//	    end
+      end
+    end
+  end   //for
+end  //isdir
 clear module dir i;
 else
 end
-    //-- Display overall report
-    nbPassed  = length(listSuccessful)
-    nbFailed  = length(listFailed)
-    nbTests   =nbPassed+nbFailed;
-   printf('\n')
-                printf('  ---------------------------------------------------------------------\n')
-                printf('   Summary\n\n')
-                printf('   builds                    %4d - 100.0 %% \n', nbPassed+nbFailed)
-                printf('   passed                    %4d - %5.1f %% \n', nbPassed,  nbPassed/nbTests*100)
-                printf('   failed                    %4d - %5.1f %% \n', nbFailed,  nbFailed/nbTests*100)
-                printf('  ---------------------------------------------------------------------\n')
 
-                printf('   Details\n\n')
-		printf('   succesfully build modules \t failed modules\n\n')
-                printf('%s\n', buildDetails)
-                printf('\n')
-                printf('  ----------------------------------------------------------------------\n')
+//-- Display overall report
+nbPassed  = length(listSuccessful)
+nbFailed  = length(listFailed)
+nbTests   =nbPassed+nbFailed;
+printf('\n')
+printf('  ---------------------------------------------------------------------\n')
+printf('   Summary\n\n')
+printf('   builds                    %4d - 100.0 %% \n', nbPassed+nbFailed)
+printf('   passed                    %4d - %5.1f %% \n', nbPassed,  nbPassed/nbTests*100)
+printf('   failed                    %4d - %5.1f %% \n', nbFailed,  nbFailed/nbTests*100)
+printf('  ---------------------------------------------------------------------\n')
+printf('   Details\n\n')
+printf('   succesfully built modules \t failed modules\n\n')
+printf('%s\n', buildDetails)
+printf('\n')
+printf('  ----------------------------------------------------------------------\n')
 
 chdir(current_dir_ethercos);
-
 
 // ====================================================================
 clear toolbox_dir i module dir;

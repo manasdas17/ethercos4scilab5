@@ -18,16 +18,24 @@
 // ====================================================================
 
 //Check for existing Description
-function slaveid = getslavedesc_checkslave(slave_desc,slavetype,rev)
-  numtypes = getslavedesc_numtypes(slave_desc);
-  slaveid=-1;
-  for i=1:numtypes
-    slavename = getslavedesc_typename(slave_desc,i);
-    if slavename == slavetype
-       revision = getslavedesc_revision(slave_desc,i);
-       if revision == rev
-         slaveid = i;
-       end
+function device = getslavedesc_checkslave(slave_desc,slavetype,rev)
+  device = [];
+  aKey = "";
+  indType = grep(slave_desc(:,1)',"/Descriptions.Devices.Device(\(\d+\))?.Type/", "r");
+  types = slave_desc(indType,:);             // This is the subset of slave_desc with type descriptions
+  aType = find(types(:,2)' == slavetype);    // Indices within types with the right slavetype
+  revkeys = types(aType,1) + ".RevisionNo";  // Construct keys for revision numbers
+  for aRevkey = revkeys'
+    aRev = find(types(:,1)' == aRevkey);     // Fetch the index of the record with the currently considered revision key
+    if ~isempty(aRev) then
+        if getnum(types(aRev, 2)) == rev then                 // The key exists.See if the value is correct.
+            aKey    = strncpy(aRevkey, length(aRevkey) - length(".Type.RevisionNo")); // The root key for the device
+            tempkey = getslavedesc_makegrepkey(aKey);         // Make the key OK for use with grep.
+            indDevice = grep(slave_desc(:,1)', "/" + tempkey + "/", "r");  
+            device    = slave_desc(indDevice,:);		      // All records for the wanted device
+            break;                                            // Found the device, so done.
+        end
     end
   end
+  //mprintf("getslavedesc_checkslave(%s, %#.8x) --> %s\n", slavetype, rev, aKey);
 endfunction

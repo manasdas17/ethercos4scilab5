@@ -19,6 +19,11 @@
 
 function [x,y,typ] = etl_scicos_realtime(job,arg1,arg2)
   x=[];y=[];typ=[];
+  use5 = %f;                    // In scicos version <5
+  try
+    getversion('scilab');
+    use5 = %t;                  // In scilab version >= 5
+  end
   select job
   case 'plot' then
     exprs=arg1.graphics.exprs;
@@ -66,8 +71,12 @@ function [x,y,typ] = etl_scicos_realtime(job,arg1,arg2)
     model.blocktype='d'
     model.dep_ut=[%t %f]
     exprs=[sci2exp(RT),sci2exp(TA)]
-    gr_i=['xstringb(orig(1),orig(2),[''RT_SYNC''],sz(1)*0.5,sz(2),''fill'');',
-	'xstringb(orig(1)+sz(1)*0.8,orig(2),[''time'';''TA'';''Puffer''],sz(1)/10,sz(2),''fill'');']
+    if use5 then
+      gr_i=['xstringb(orig(1),orig(2),[''Ethercat'';''RT_SYNC''],sz(1),sz(2),''fill'');']
+    else
+      gr_i=['xstringb(orig(1),orig(2),[''RT_SYNC''],sz(1)*0.5,sz(2),''fill'');',
+            'xstringb(orig(1)+sz(1)*0.8,orig(2),[''time'';''TA'';''Puffer''],sz(1)/10,sz(2),''fill'');'];
+    end
     x=standard_define([4 2],model,exprs,gr_i)
   end
 endfunction

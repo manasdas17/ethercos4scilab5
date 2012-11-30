@@ -17,19 +17,22 @@
 // Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA//
 // ====================================================================
 
-function [index,subindex,bitlen,datatype] = getslavedesc_SmPdoEntry(slave_desc,deviceindex,direction,pdoindex,entryindex)
-    index = 0;
-    subindex = 0;
-    bitlen = 0;
-    datatype = 0;
-    if direction == 1 //TxPdo, Slave send to Master
-      pdo = slave_desc.Descriptions.Devices.Device(deviceindex).TxPdo(pdoindex);
-    end
-    if direction == 2 //RxPdo, Master send to Slave
-      pdo = slave_desc.Descriptions.Devices.Device(deviceindex).RxPdo(pdoindex);
-    end
-    index = pdo.Entry(entryindex).Index;
-    subindex = pdo.Entry(entryindex).SubIndex;
-    bitlen = pdo.Entry(entryindex).BitLen;
-    datatype = pdo.Entry(entryindex).DataType;
+function [index,subindex,bitlen,datatype] = getslavedesc_SmPdoEntry(pdo_desc, pdo_key, entryindex)
+    //mprintf("getslavedesc_SmPdoEntry");
+    key = pdo_key + "Entry";
+    if (entryindex ~= 1) | (isempty(find( pdo_desc == key + ".Index"))) then
+        key = key + "(" + string(entryindex) + ")";
+    end;
+    //mprintf("<key = %s>", key);
+    index        = getnum(pdo_desc(find(pdo_desc == key + ".Index"   ), 2));
+    bitlen       = getnum(pdo_desc(find(pdo_desc == key + ".BitLen"  ), 2));
+    if index == 0 then
+        // GAP-Entry found
+        subindex = 0;
+        datatype = 0;
+    else
+        subindex = getnum(pdo_desc(find(pdo_desc == key + ".SubIndex"), 2));
+        datatype =        pdo_desc(find(pdo_desc == key + ".DataType"), 2);
+    end;
+    //mprintf("(%s, %d) --> %#.4x, %#x, %d, %s\n", pdo_key, entryindex, index, subindex, bitlen, string(datatype));
 endfunction

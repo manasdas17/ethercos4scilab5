@@ -64,6 +64,7 @@ function [repeat_dialog,selslave,selectid,MID,DID,SLA,SLP,SLST,ENFILT,TC1,TC2,TC
     end
    sleep(100);
   end
+  //mprintf("Dismissing dialog el33xx\n");
   repeat_dialog = %f;
   selslave = TCL_GetVar('slaveselected')
   selectid = evstr(TCL_GetVar('selectid'))
@@ -124,6 +125,5 @@ function [repeat_dialog,selslave,selectid,MID,DID,SLA,SLP,SLST,ENFILT,TC1,TC2,TC
   if CJ4<0  then
     repeat_dialog = %t;
   end
-
-  TCL_EvalStr('destroy $eltop')
+  TCL_EvalStr('destroy $eltop');
  endfunction

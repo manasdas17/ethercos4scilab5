@@ -3,7 +3,12 @@
 #define MACHINE_H 
 
 #undef VERSION 
+
+/* Version 4xx: found in e.g. /usr/lib/scicoslab-gtk-4.3/routines)
+   Version 5xx: compiler error 'file not found.' */
+#ifndef version5
 #include "config.h" 
+#endif
 
 /* Define for using dld for sunos */
 #undef SUNOSDLD

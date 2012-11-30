@@ -17,18 +17,20 @@
 // Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA//
 // ====================================================================
 
-function slave_config= getslavedesc_getconfig(slave_desc,slave_typeid)
- slave_config.vendor = getslavedesc_vendor(slave_desc);
- slave_config.productcode = getslavedesc_productcode(slave_desc,slave_typeid);
- slave_numSm = getslavedesc_numSm(slave_desc,slave_typeid);
+function slave_config = getslavedesc_getconfig(slave_desc, dev_desc)
+ rootkey = getslavedesc_getrootkey(dev_desc);
+ //mprintf("getslavedesc_getconfig on rootkey %s\n", rootkey);
  slave_config = [];
+ slave_config.vendor      = getslavedesc_vendor(slave_desc);
+ slave_config.productcode = getslavedesc_productcode(dev_desc, rootkey);
+ slave_numSm              = getslavedesc_numSm(dev_desc, rootkey);
  index_sm = 1;
  for i=1:slave_numSm
   //disp(['Syncmgr: '+string(i)])
-  CBytetype =getslavedesc_getsmtype(slave_desc,slave_typeid,i);
+  CBytetype =getslavedesc_getsmtype(dev_desc, rootkey, i);
   //disp(['Controltype: '+string(CBytetype)])
   if CBytetype >= 0 then 
-    slave_numPdo = getslavedesc_numPdo(slave_desc,slave_typeid,CBytetype);
+    slave_numPdo = getslavedesc_numPdo(dev_desc, rootkey, CBytetype);
     //disp(['Pdo Count: '+string(slave_numPdo)])
     index_default = 1;
     index_alternative = 1;
@@ -38,34 +40,44 @@ function slave_config= getslavedesc_getconfig(slave_desc,slave_typeid)
     for j=1:slave_numPdo
       //disp(['Pdo: '+string(j)])
       Pdo=[];
-     [smno,pdoindex,smexclude,smmandatory] = getslavedesc_SmPdoInfo(slave_desc,slave_typeid,CBytetype,j);
+     [pdo_desc, pdo_key, smno, pdoindex, smexclude, smmandatory] = getslavedesc_SmPdoInfo(dev_desc, rootkey, CBytetype, j);
      Pdo.index = pdoindex;
-     slave_numentrys = getslavedesc_SmPdonEntry(slave_desc,slave_typeid,CBytetype,j); 
+     slave_numentrys = getslavedesc_SmPdonEntry(pdo_desc, pdo_key); 
      //disp(['Entrys :'+string(slave_numentrys)]);
      Pdo.Entrys = cell2mat(cell(slave_numentrys,4));
      for k=1:slave_numentrys
-       [eindex,esubindex,ebitlen,etype] = getslavedesc_SmPdoEntry(slave_desc,slave_typeid,CBytetype,j,k);
+       [eindex,esubindex,ebitlen,etype] = getslavedesc_SmPdoEntry(pdo_desc, pdo_key, k);
        if eindex == 0 then
           //disp('GAP-Entry found')
           esubindex = 0;
           etype = 0;
        end
+       // etype comes out of the xml as a number of possible strings (e.g. BOOL, SINT, UDINT, DWORD, BIT2)
+       // The result seems not to be actually used anywhere.
+       // If it is ever used, it will have to be translated to an enumeration integer, because subsequent 
+       //     processing is all integer based.
+       // For now, we just set the type to 0.
+       // Another note: a number of Pdo Entries define a DataType.DScale attribute (e.g 0.1degrC)
+       // Currently, there is no application for this in EtherCOS anywhere.
+       etype = 0;
        //disp(['Pdo Entry: '+string(eindex)+' '+string(esubindex)+' '+string(ebitlen)+' '+string(etype)])
-       Pdo.Entrys(k,:)=[eindex esubindex ebitlen etype]
+       Pdo.Entrys(k,:)=[eindex esubindex ebitlen etype];      // etype as a string would have made this line fail.
      end
-     //disp(['Sync Index '+string(smno)+' available '+string(~isempty(smno))])
-     if and([~isempty(smno) isequal(smno,i-1)]) then //Passender Eintrag für Syncmanager
+     //mprintf("Sync Index "+string(smno)+" available "+string(~isempty(smno)) + "\n");
+     if and([~isempty(smno) isequal(smno,i-1)]) then //Fitting entry for SyncManager
        Sm.default.Pdo(index_default) = Pdo;
-       //disp('Added Default Sync Manager Configuration')
+       //mprintf("Added Default Sync Manager Configuration\n");
        index_default = index_default+1;
      else
        Sm.alternativ.Pdo(index_alternative) = Pdo; 
-       //disp('Added Alternativ Sync Manager Configuration')
+       //mprintf("Added Alternativ Sync Manager Configuration\n");
        index_alternative = index_alternative +1;
      end
     end 
     slave_config.Sm(index_sm)=Sm;
+    //disp(Sm)
     index_sm = index_sm +1;
-  end
- end
+  end // if CByteType > 0
+ end  // for slave_numSm
+ //mprintf("getslavedesc_getconfig done.\n");
 endfunction

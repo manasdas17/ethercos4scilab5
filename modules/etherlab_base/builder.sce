@@ -25,61 +25,70 @@ TOOLBOX_TITLE = 'base module for Etherlab Toolbox';
 
 mode(-1);
 lines(0);
+
 status='';
 if (exists('buildDetails')==0) then
 	buildDetails='';
 end
+
 module_dir = get_absolute_file_path('builder.sce');
 try
- getversion('scilab');
- if ~with_module('development_tools') then
-  error(msprintf(gettext('%s module not installed."),'development_tools'));
-  end
-catch
-  try
-    test=gettext('test');
-    clear test;
-  catch
-    try
-      baselib=lib(module_dir+"..\..\macros\");
-    catch
-      error(msprintf(('%s Toolbox not installed."),'ETHERLAB'));
+    getversion('scilab');
+    if ~with_module('development_tools') then
+        error(msprintf(gettext('%s module not installed."),'development_tools'));
     end
-  end
-
+    if ~with_module('helptools') then
+        error(msprintf(gettext('%s module not installed."),'helptools'));
+    end
+catch
+    try
+        test=gettext('test');
+        clear test;
+    catch
+        try
+            baselib=lib(module_dir+"..\..\macros\");
+        catch
+            error(msprintf(('%s Toolbox not installed."),'ETHERLAB'));
+        end
+    end
 end;
 
 // ====================================================================
 
 try
+    tbx_build_loader(TOOLBOX_NAME, module_dir);
 
+    mprintf(gettext('Converting Slave Descriptions...\n')); 
+    try
+        getversion('scilab');
+        // Use the Ethercat xml files for the device data.
+        devtools_run_builder(module_dir, 'slave_descriptions', 'convert_sd_xml2dat.sce');
+    catch:
+        // The old (version < 5) way.
+        // Use the EtherLab (MatLab) datafiles. 
+        // This seems to crash under scilab 5.2.2, 
+        devtools_run_builder(module_dir, 'slave_descriptions', 'convert_sd_mat2dat.sce');
+    end
+    //exec loader.sce
 
-tbx_build_loader(TOOLBOX_NAME, module_dir);
+    tbx_builder_macros(module_dir);
 
+    tbx_builder_src(module_dir);
+    //tbx_builder_gateway(module_dir);
+    tbx_builder_help(module_dir);
 
-mprintf(gettext('Converting Slave Descriptions...\n'));	
-devtools_run_builder(module_dir, 'slave_descriptions', 'convert_sd_mat2dat.sce');
-
-//exec loader.sce
-
-tbx_builder_macros(module_dir);
-
-
-tbx_builder_src(module_dir);
-//tbx_builder_gateway(module_dir);
-tbx_builder_help(module_dir);
-
-
-listSuccessful($+1)=TOOLBOX_NAME;
-status=sprintf(' |   %s                         ',TOOLBOX_NAME);
+    listSuccessful($+1)=TOOLBOX_NAME;
+    status=sprintf(' |   %s                         ',TOOLBOX_NAME);
 
 catch
-   status=sprintf(' !                         %s ',TOOLBOX_NAME);
-    printf('etherlab %s module could not be build!',TOOLBOX_NAME);
+    [str,n,line,func]=lasterror(%f);
+    mprintf("Error message: %s\nOn line %d of %s\n", str, line, func);
+    printf('etherlab %s module could not be built!',TOOLBOX_NAME);
+
     listFailed($+1)=TOOLBOX_NAME;
+    status=sprintf(' !                         %s ',TOOLBOX_NAME);
 end
 buildDetails=[buildDetails; status];
-
 
 clear tbx_builder_macros tbx_builder_src tbx_builder_gateway tbx_builder_help tbx_build_loader;
 clear module_dir;

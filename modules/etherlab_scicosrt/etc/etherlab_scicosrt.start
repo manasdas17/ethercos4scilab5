@@ -18,21 +18,26 @@
 // ====================================================================
 
 modules_name='etherlab_scicosrt'; //same name as the starter files in etc
-disp('Start Etherlab scicos realtime module');
+mprintf("Start Etherlab scicos realtime module\n");
 
 // ====================================================================
 
 warning_mode = warning('query');
 warning('off');
-current_dir=getcwd();
+current_dir=pwd();
 
 etc_tlbx = get_absolute_file_path(modules_name+'.start');
 etc_tlbx = getshortpathname(etc_tlbx);
 
+use5 = %f;
 try
   getversion('scilab');
+  use5 = %t;
+end
+
+if use5 then
   root_tlbx = strncpy( etc_tlbx, length(etc_tlbx)-length('\etc\') );
-catch
+else
   root_tlbx = part( etc_tlbx, 1:(length(etc_tlbx)-length('etc\')) );
   try
     test=gettext('test');
@@ -46,62 +51,56 @@ catch
   end
 end
 
-
-
 pathmacros = pathconvert( root_tlbx ) + 'macros'+ filesep();
 pathcsource = pathconvert( root_tlbx ) + "src"+filesep()+"c"+ filesep();
 status='';
 
-
 try
-disp('Load macros');
-load(pathmacros + "lib");
-
-
-
-try
-  getversion('scilab');
-catch
-  scicos_pal($ + 1, 1) = "ETHERLAB "+modules_name;
-  scicos_pal($, 2) = pathmacros + "macros.cosf";
-end
-
-disp('Load c-lib');
-chdir(pathcsource);
-exec("loader.sce");
-
-
+    disp('Load macros');
+    load(pathmacros + "lib");
+    if use5 then
+      loadXcosLibs();
+      palette_name = pathconvert(root_tlbx + "/images/h5") + modules_name + ".h5";
+      //mprintf("**1**: %s: %s\n", "palette_name", palette_name);
+      [status, msg] = xcosPalAdd(palette_name, "Etherlab");
+      //mprintf("**2**\n");
+      if ~status then
+          error(msg);
+      end
+    else
+        scicos_pal($ + 1, 1) = "ETHERLAB "+modules_name;
+        scicos_pal($, 2) = pathmacros + "macros.cosf";
+    end
 
 
 
 
-chdir(current_dir);
-disp('Load help');
+    mprintf("Load c-lib\n");
+    chdir(pathcsource);
+    exec("loader.sce");
+    chdir(current_dir);
  
- //add help chapter
-try
-  getversion('scilab');
-//add help chapter
+    //add help chapter
+    mprintf("Load help\n");
+    if use5 then
+        path_addchapter = root_tlbx + "/jar/";
+        if ( fileinfo(path_addchapter) <> [] ) then
+            add_help_chapter('Etherlab ScicosRT', path_addchapter, %F);
+            clear add_help_chapter;
+        end
+    else
+        path_addchapter = root_tlbx+"/help/en_US_scilab4/addchapter.sce";
+        exec(path_addchapter);
+    end
 
-  path_addchapter = root_tlbx + "/jar/";
-  if ( fileinfo(path_addchapter) <> [] ) then
-    add_help_chapter('Etherlab ScicosRT', path_addchapter, %F);
-    clear add_help_chapter;
-  end
+    listSuccessful($+1)=modules_name;
+    status=sprintf(' |   %s                         ',modules_name);
 catch
-  path_addchapter = root_tlbx+"/help/en_US_scilab4/addchapter.sce";
-  exec(path_addchapter);
-end
-
-
-listSuccessful($+1)=modules_name;
-status=sprintf(' |   %s                         ',modules_name);
-
-catch
-    status=sprintf(' !                         %s ',modules_name);
     printf('etherlab %s module could not loaded!',modules_name);
-   listFailed($+1)=modules_name;
+    listFailed($+1)=modules_name;
+    status=sprintf(' !                         %s ',modules_name);
 end
+
 if (exists('loadDetails')==0) then
 	loadDetails='';
 end
@@ -118,4 +117,5 @@ clear current_dir;
 clear pathcsource;
 clear status;
 clear modules_name;
+clear use5;
 // ====================================================================

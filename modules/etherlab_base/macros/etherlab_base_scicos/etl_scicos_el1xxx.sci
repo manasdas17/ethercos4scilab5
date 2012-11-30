@@ -19,6 +19,11 @@
 
 function [x,y,typ]=etl_scicos_el1xxx(job,arg1,arg2)
 x=[];y=[];typ=[];
+use5 = %f;                    // In scicos version <5
+try
+  getversion('scilab');
+  use5 = %t;                  // In scilab version >= 5
+end
 select job
 case 'plot' then
   exprs=arg1.graphics.exprs;
@@ -39,6 +44,7 @@ case 'set' then
   x=arg1;
   graphics=arg1.graphics;exprs=graphics.exprs
   model=arg1.model;
+
   while %t do
    STYP=exprs(1)
    MID=evstr(exprs(2))
@@ -47,7 +53,7 @@ case 'set' then
    SLP=evstr(exprs(5))
    STYPID=evstr(exprs(6))
    [ln,fun]=where(); 
-   if (fun(3) == "clickin") then
+   if or(fun(3) == ["clikin", "xcosBlockInterface"]) then
        [loop,STYP,STYPID,MID,DID,SLA,SLP] = set_etl_slave_el1xxx(STYP,STYPID,MID,DID,SLA,SLP);
     else
        loop = %f;
@@ -145,7 +151,7 @@ case 'set' then
 	[slave_pdomapping,slave_pdomapping_scale,valid_mapping]=build_mapstruct(channel);
    end
    if STYP == 'EL1004V2' then
-   	slave_revision = hex2dec('0010000');	
+   	slave_revision = hex2dec('00100000');	
        	slave_type = 'EL1004';
        	slave_inputs = []; //[rows input 1 colums input 1;...]
 	slave_input_types = [] //all real [Type Input 1; Type Input 2]
@@ -436,18 +442,21 @@ case 'set' then
    end
 
    if valid_mapping < 0 then
-	disp('No valid Mapping Configuration');
+	mprintf("No valid mapping configuration for %s", slave_type);
    end;
 
-
-   slave_typeid = getslavedesc_checkslave(slave_desc,slave_type,slave_revision);
-   if slave_typeid > 0 then
-   	slave_config= getslavedesc_getconfig(slave_desc,slave_typeid);
-	[slave_smconfig,slave_pdoconfig,slave_pdoentry,valid_slave] = getslavedesc_buildopar(slave_config,0,0); //Default Configurartion
+   dev_desc = getslavedesc_checkslave(slave_desc,slave_type,slave_revision);
+   if ~isempty(dev_desc) then
+    slave_config= getslavedesc_getconfig(slave_desc, dev_desc);
+    slave_vendor = slave_config.vendor;              //getslavedesc_vendor(slave_desc);
+    slave_productcode = slave_config.productcode;    //getslavedesc_productcode(slave_desc,slave_typeid);
+    slave_generic = int32([slave_vendor; slave_productcode]);
+    [slave_smconfig,slave_pdoconfig,slave_pdoentry,valid_slave] = getslavedesc_buildopar(slave_config,0,0); //Default Configurartion
    else
-	disp('Can not find valid Configuration')
+    mprintf("Size: %s\n", strcat(string(size(dev_desc))," "));
+    mprintf("Can not find valid configuration for %s rev %8x\n", slave_type, slave_revision);
    end
-	
+
    if isempty(slave_inputs) then
 	slave_input_list = list();
    else
@@ -473,9 +482,6 @@ case 'set' then
      DEBUG=1; //DEBUG =1 => Debug the calculation function 
      model.ipar=[DEBUG;MID;DID;SLA;SLP];  //transmit integer variables to the c block 
      model.rpar=[];       		 //transmit double variables to the c block
-     slave_vendor = getslavedesc_vendor(slave_desc);
-     slave_productcode = getslavedesc_productcode(slave_desc,slave_typeid);
-     slave_generic = int32([slave_vendor; slave_productcode]);
      model.opar = list(slave_smconfig,slave_pdoconfig,slave_pdoentry,slave_sdoconfig,slave_pdomapping,slave_generic,slave_pdomapping_scale);
      model.dstate=[1];
      model.dep_ut=[%t, %f]	
@@ -513,11 +519,12 @@ case 'define' then
   //Set Default Slave
   slave_desc = getslavedesc('EtherCATInfo_el1xxx');	
   slave_revision = hex2dec('0000000');
-  slave_typeid = getslavedesc_checkslave(slave_desc,slave_type,slave_revision);
-  slave_config= getslavedesc_getconfig(slave_desc,slave_typeid);	
-  [slave_smconfig,slave_pdoconfig,slave_pdoentry,valid_slave] = getslavedesc_buildopar(slave_config,0,0); //Default Configurartion
-  slave_vendor = getslavedesc_vendor(slave_desc);
-  slave_productcode = getslavedesc_productcode(slave_desc,slave_typeid);
+  dev_desc = getslavedesc_checkslave(slave_desc,slave_type,slave_revision);
+  slave_config= getslavedesc_getconfig(slave_desc, dev_desc); 
+  slave_vendor = slave_config.vendor;           //getslavedesc_vendor(slave_desc);
+  slave_productcode = slave_config.productcode; //getslavedesc_productcode(slave_desc,slave_typeid);
+  slave_generic = int32([slave_vendor; slave_productcode]);
+  [slave_smconfig,slave_pdoconfig,slave_pdoentry,valid_slave] = getslavedesc_buildopar(slave_config,0,0); //Default Configurartion 
 
   //Clear Channel List
   clear channel
@@ -547,8 +554,11 @@ case 'define' then
   slave_generic = int32([slave_vendor; slave_productcode]);
   model.opar = list(slave_smconfig,slave_pdoconfig,slave_pdoentry,slave_sdoconfig,slave_pdomapping,slave_generic,slave_pdomapping_scale);
   exprs=[STYP,sci2exp(ipar(2)),sci2exp(ipar(3)),sci2exp(ipar(4)),sci2exp(ipar(5)),sci2exp(STYPID)]
-  gr_i=['xstringb(orig(1),orig(2),[''Ethercat ''+STYP;''Master ''+string(MID)+'' Pos ''+string(SLP);''Alias ''+string(SLA)],sz(1),sz(2),''fill'');']
-
+  if use5 then
+    gr_i=['xstringb(orig(1),orig(2),[''Ethercat'';''EL1XXX''],sz(1),sz(2),''fill'');']
+  else
+    gr_i=['xstringb(orig(1),orig(2),[''Ethercat ''+STYP;''Master ''+string(MID)+'' Pos ''+string(SLP);''Alias ''+string(SLA)],sz(1),sz(2),''fill'');']
+  end  
   x=standard_define([4 2],model,exprs,gr_i)
   x.graphics.id=["EL1XXX"]
 end     	

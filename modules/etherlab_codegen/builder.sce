@@ -34,46 +34,40 @@ module_dir = get_absolute_file_path('builder.sce');
 
 //=====================================================================
 //Set Release dependend Codegeneration Files
+
 try
   [version,modules]=getversion();
-  disp('')
-  select version
-	case 'scilab-4.1.2' then
-		shellstr = 'ln -s '+module_dir+'libs/4.1.2 '+module_dir+'libs_codegen'; 
-	    	rcode = unix(shellstr);
-		if rcode != 0 then
-		  disp('Library Initialisation not successfull!')
-		  return;
-		end
-	case 'Scilab-Gtk-2007-12-07' then
-		shellstr = 'ln -s '+module_dir+'libs/4.1.2 '+module_dir+'libs_codegen'; 
-	    	rcode = unix(shellstr);
-		if rcode != 0 then
-		  disp('Macro Initialisation not successfull!')
-		  return;
-		end
-	case '4.3' then
-		// The link creation at 'make'ing twice fails with a shell message, breaks the make process but 
-		// does not give the rcode!=0 message. Removing this link remedies this.
-		shellstr = 'rm -f '+module_dir+'libs/4.3/4.3'
-		rcode = unix(shellstr)
-		if rcode != 0 then 
-		  disp('Cannot remove link '+module_dir+'libs/4.3/4.3');
-		end
-		shellstr = 'ln -s '+module_dir+'libs/4.3 '+module_dir+'libs_codegen';
-    	rcode = unix(shellstr);
-		if rcode != 0 then
-		  disp('Macro Initialisation not successfull!')
-		  return;
-		end
-	else
-	  disp('Scilab Version not supported');
-	  return;	
- end;
-catch 
- disp('Failure Handling')
-end 
+  [from, to] = regexp(version, '/^[Ss]cilab-/');
+  if from then
+      version = part(version, to+1:length(version));    // strip leading '[sS]ilab-'
+  end;  
+  if find(version == ['4.1.2', '4.3', '5.3.3']) then
+    libnm = '/'+version;
+  elseif find(version == ['Gtk-2007-12-07']) then
+    libnm = '/4.1.2';
+  else
+    disp('Scilab Version ''' + version + ''' not supported');
+    return; 
+  end
 
+  // The link creation at 'make'ing twice fails with a shell message, breaks the make process but 
+  // does not give the rcode!=0 message. Removing this link remedies this.
+  //shellstr = 'rm -f '+module_dir+'libs'+libnm+libnm;
+  //rcode = unix(shellstr);
+  //if rcode != 0 then 
+  //  disp('Cannot remove link '+module_dir+'libs'+libnm+libnm);
+  //end
+
+  // Now create the link
+    shellstr = 'ln -sf '+module_dir+'libs'+libnm+' '+module_dir+'libs_codegen';
+    rcode = unix(shellstr);
+  if rcode != 0 then
+    disp('Macro Initialisation not successfull!')
+    return;
+  end
+catch 
+  disp('Failure Handling')
+end 
 
 try
  getversion('scilab');
@@ -97,22 +91,14 @@ end;
 // ====================================================================
 
 try
+    tbx_build_loader(TOOLBOX_NAME, module_dir);
+    tbx_builder_macros(module_dir);
+    //tbx_builder_src(module_dir);
+    //tbx_builder_gateway(module_dir);
+    tbx_builder_help(module_dir);
 
-
-tbx_build_loader(TOOLBOX_NAME, module_dir);
-
-
-tbx_builder_macros(module_dir);
-
-
-//tbx_builder_src(module_dir);
-//tbx_builder_gateway(module_dir);
-tbx_builder_help(module_dir);
-
-
-listSuccessful($+1)=TOOLBOX_NAME;
-status=sprintf(' |   %s                         ',TOOLBOX_NAME);
-
+    listSuccessful($+1)=TOOLBOX_NAME;
+    status=sprintf(' |   %s                         ',TOOLBOX_NAME);
 catch
    status=sprintf(' !                         %s ',TOOLBOX_NAME);
     printf('etherlab %s module could not be build!',TOOLBOX_NAME);

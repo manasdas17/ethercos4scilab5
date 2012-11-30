@@ -17,6 +17,9 @@
 // Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA//
 // ====================================================================
 
-function productcode = getslavedesc_productcode(slave_desc,index)
-    productcode = slave_desc.Descriptions.Devices.Device(index).Type.ProductCode;
+function productcode = getslavedesc_productcode(dev_desc, rootkey)
+    //productcode = slave_desc.Descriptions.Devices.Device(index).Type.ProductCode;
+    res = find(dev_desc == rootkey + "Type.ProductCode");
+    productcode = getnum(dev_desc(res,2));
+    //mprintf("getslavedesc_productcode(%s) --> %#.8x\n", rootkey, productcode);
 endfunction

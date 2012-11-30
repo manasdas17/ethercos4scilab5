@@ -17,16 +17,25 @@
 // Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA//
 // ====================================================================
 
-function numpdo = getslavedesc_numPdo(slave_desc,index,direction)
+function numpdo = getslavedesc_numPdo(dev_desc, rootkey, direction)
   if direction == 1 then //TxPdo, Input
-    tmpnumpdo = size(slave_desc.Descriptions.Devices.Device(index).TxPdo);
-  end
-  if direction == 2 then //RxPdo, Output
-    tmpnumpdo = size(slave_desc.Descriptions.Devices.Device(index).RxPdo);
-  end
+    aPdo = 'TxPdo';
+  elseif direction == 2 then //RxPdo, Output
+    aPdo = 'RxPdo';
+  else
+    numpdo = -1; // Unexpected input
+    //mprintf("getslavedesc_numPdo(%s, %d) --> error: direction not 1 or 2.\n", rootkey, direction);
+    return;
+  end;
+  //tmpnumpdo = size(slave_desc.Descriptions.Devices.Device(index).TxPdo);
+  //tmpnumpdo = size(slave_desc.Descriptions.Devices.Device(index).RxPdo);
+  //mprintf("getslavedesc_numPdo(%s, %d) --> ", rootkey, direction);
+  key = getslavedesc_makegrepkey(rootkey) + aPdo + "(\(\d+\))?\.Index";
+  tmpnumpdo = size(grep(dev_desc(:,1)', "/" + key + "/", "r"));
   if and(tmpnumpdo) then
     numpdo = max(tmpnumpdo);
   else
     numpdo = -1; 
   end
+  //mprintf("%d\n", numpdo);
 endfunction

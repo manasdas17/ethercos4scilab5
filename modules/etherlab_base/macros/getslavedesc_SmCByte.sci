@@ -17,6 +17,19 @@
 // Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA//
 // ====================================================================
 
-function controlbyte = getslavedesc_SmCByte(slave_desc,index,smindex)
-    controlbyte = slave_desc.Descriptions.Devices.Device(index).Sm(smindex).ControlByte;
+function controlbyte = getslavedesc_SmCByte(dev_desc, rootkey, smindex)
+    //mprintf("getslavedesc_SmCByte( %s, %d) --> ", rootkey, smindex);
+    //controlbyte = slave_desc.Descriptions.Devices.Device(index).Sm(smindex).ControlByte;
+    key = rootkey + "Sm";
+    if (smindex == 1) then
+        res = find(dev_desc == key + ".ControlByte");
+        if res then
+            controlbyte = getnum(dev_desc(res, 2));        // There is no Sm index
+            //mprintf("%d\n", controlbyte);
+            return;
+        end;
+    end;
+    res = find(dev_desc == key + "(" + string(smindex) + ").ControlByte");
+    controlbyte = getnum(dev_desc(res, 2));
+    //mprintf("%d\n", controlbyte);
 endfunction

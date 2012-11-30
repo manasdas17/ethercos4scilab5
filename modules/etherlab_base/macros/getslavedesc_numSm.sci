@@ -17,6 +17,10 @@
 // Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA//
 // ====================================================================
 
-function numSm = getslavedesc_numSm(slave_desc,index)
-    numSm = max(size(slave_desc.Descriptions.Devices.Device(index).Sm));
+function numSm = getslavedesc_numSm(dev_desc, rootkey)
+    //mprintf("getslavedesc_numSm(%s) --> ", rootkey);
+    //numSm = max(size(slave_desc.Descriptions.Devices.Device(index).Sm));
+    key = "/" + getslavedesc_makegrepkey(rootkey) + "Sm(\(\d+\))?.ControlByte/";
+    numSm = max(size(grep(dev_desc(:,1)', key, "r")));
+    //mprintf("%d\n", numSm);
 endfunction

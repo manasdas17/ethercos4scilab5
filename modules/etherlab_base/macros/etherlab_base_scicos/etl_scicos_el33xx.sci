@@ -19,6 +19,11 @@
 
 function [x,y,typ]=etl_scicos_el33xx(job,arg1,arg2)
   x=[];y=[];typ=[];
+  use5 = %f;                      // In scicos version <5
+  try
+    getversion('scilab');
+    use5 = %t;                  // In scilab version >= 5
+  end
   select job
   case 'plot' then
     exprs=arg1.graphics.exprs;
@@ -49,6 +54,7 @@ function [x,y,typ]=etl_scicos_el33xx(job,arg1,arg2)
     x=arg1;
     graphics=arg1.graphics;exprs=graphics.exprs
     model=arg1.model;
+    
     while %t do
       STYP=exprs(1)
       MID=evstr(exprs(2))
@@ -68,12 +74,11 @@ function [x,y,typ]=etl_scicos_el33xx(job,arg1,arg2)
       CJTYP4=evstr(exprs(16))
 
       [ln,fun]=where(); 
-      if (fun(3) == "clickin") then
-        [loop,STYP,STYPID,MID,DID,SLA,SLP,SLST,ENFI,TCTYP1,TCTYP2,TCTYP3,TCTYP4,CJTYP1,CJTYP2,CJTYP3,CJTYP4] = set_etl_slave_el33xx(STYP,STYPID,MID,DID,SLA,SLP,SLST,ENFI,TCTYP1,TCTYP2,TCTYP3,TCTYP4,CJTYP1,CJTYP2,CJTYP3,CJTYP4);
+      if or(fun(3) == ["clikin", "xcosBlockInterface"]) then
+         [loop,STYP,STYPID,MID,DID,SLA,SLP,SLST,ENFI,TCTYP1,TCTYP2,TCTYP3,TCTYP4,CJTYP1,CJTYP2,CJTYP3,CJTYP4] = set_etl_slave_el33xx(STYP,STYPID,MID,DID,SLA,SLP,SLST,ENFI,TCTYP1,TCTYP2,TCTYP3,TCTYP4,CJTYP1,CJTYP2,CJTYP3,CJTYP4);
       else
-        loop = %f;
+         loop = %f;
       end
-
       //SDO Config
       //Datatype Index Subindex Value
       slave_sdoconfig = int32([]);
@@ -252,9 +257,12 @@ function [x,y,typ]=etl_scicos_el33xx(job,arg1,arg2)
       //disp("pdo_map");disp(slave_pdomapping);
       //disp("pdo_map_scale");disp(slave_pdomapping_scale);
 
-      slave_typeid = getslavedesc_checkslave(slave_desc,slave_type,slave_revision);
-      if slave_typeid > 0 then
-        slave_config= getslavedesc_getconfig(slave_desc,slave_typeid);
+      dev_desc = getslavedesc_checkslave(slave_desc,slave_type,slave_revision);
+      if ~isempty(dev_desc) then
+        slave_config= getslavedesc_getconfig(slave_desc, dev_desc);
+        slave_vendor = slave_config.vendor;              //getslavedesc_vendor(slave_desc);
+        slave_productcode = slave_config.productcode;    //getslavedesc_productcode(slave_desc,slave_typeid);
+        slave_generic = int32([slave_vendor; slave_productcode]);
         [slave_smconfig,slave_pdoconfig,slave_pdoentry,valid_slave] = getslavedesc_buildopar(slave_config,0,0); //Default Configurartion
       else
         disp('Can not find valid Configuration.');
@@ -293,9 +301,6 @@ function [x,y,typ]=etl_scicos_el33xx(job,arg1,arg2)
         DEBUG=1; //DEBUG =1 => Debug the calculation function 
         model.ipar=[DEBUG;MID;DID;SLA;SLP];  //transmit integer variables to the c block 
         model.rpar=[];       		 //transmit double variables to the c block
-        slave_vendor = getslavedesc_vendor(slave_desc);
-        slave_productcode = getslavedesc_productcode(slave_desc,slave_typeid);
-        slave_generic = int32([slave_vendor; slave_productcode]);
         model.opar = list(slave_smconfig,slave_pdoconfig,slave_pdoentry,slave_sdoconfig,slave_pdomapping,slave_generic, slave_pdomapping_scale);
         model.dstate=[1];
         model.dep_ut=[%t, %f]
@@ -329,17 +334,17 @@ function [x,y,typ]=etl_scicos_el33xx(job,arg1,arg2)
     slave_sdoconfig = int32([]);
     rpar=[];
     ipar=[DEBUG;MID;DID;SLA;SLP];
-    model.evtin=1
-    model.evtout=[]
-    model.out=[1]
-    model.out2=[1]
-    model.outtyp=[1]
-    model.in=[]
+    model.evtin=1;
+    model.evtout=[];
+    model.out=[1];
+    model.out2=[1];
+    model.outtyp=[1];
+    model.in=[];
     model.rpar=rpar;
     model.ipar=ipar;
     model.dstate=[1];
-    model.blocktype='d'
-    model.dep_ut=[%t, %f]
+    model.blocktype='d';
+    model.dep_ut=[%t, %f];
 
     //SDO-Configuration
     sdoinc=1
@@ -394,11 +399,13 @@ function [x,y,typ]=etl_scicos_el33xx(job,arg1,arg2)
     //Set Default Slave
     slave_desc = getslavedesc('EtherCATInfo_el3xxx');	
     slave_revision = hex2dec('00100000');
-    slave_typeid = getslavedesc_checkslave(slave_desc,slave_type,slave_revision);
-    slave_config= getslavedesc_getconfig(slave_desc,slave_typeid);	
-    [slave_smconfig,slave_pdoconfig,slave_pdoentry,valid_slave] = getslavedesc_buildopar(slave_config,0,0); //Default Configurartion
-    slave_vendor = getslavedesc_vendor(slave_desc);
-    slave_productcode = getslavedesc_productcode(slave_desc,slave_typeid);
+    dev_desc = getslavedesc_checkslave(slave_desc,slave_type,slave_revision);
+    slave_config= getslavedesc_getconfig(slave_desc, dev_desc);   
+    slave_vendor = slave_config.vendor;           //getslavedesc_vendor(slave_desc);
+    slave_productcode = slave_config.productcode; //getslavedesc_productcode(slave_desc,slave_typeid);
+    slave_generic = int32([slave_vendor; slave_productcode]);
+    [slave_smconfig,slave_pdoconfig,slave_pdoentry,valid_slave] = getslavedesc_buildopar(slave_config,0,0); //Default Configurartion 
+
     //Index subindex vectorlength valuetype bitlength Channelno Direction TypeCode Fullrange Scale Offset
     clear channel;
     channel(1).index = hex2dec('6000');
@@ -416,12 +423,14 @@ function [x,y,typ]=etl_scicos_el33xx(job,arg1,arg2)
     if valid_mapping < 0 then
       disp('No valid Mapping Configuration');
     end;
-    slave_generic = int32([slave_vendor; slave_productcode]);
     model.opar = list(slave_smconfig,slave_pdoconfig,slave_pdoentry,slave_sdoconfig,slave_pdomapping,slave_generic, slave_pdomapping_scale);
 
     exprs=[STYP,sci2exp(ipar(2)),sci2exp(ipar(3)),sci2exp(ipar(4)),sci2exp(ipar(5)),sci2exp(SLST),sci2exp(STYPID),sci2exp(ENFI),sci2exp(TCTYP1),sci2exp(TCTYP2),sci2exp(TCTYP3),sci2exp(TCTYP4),sci2exp(CJTYP1),sci2exp(CJTYP2),sci2exp(CJTYP3),sci2exp(CJTYP4)];
-    gr_i=['xstringb(orig(1),orig(2),[''Ethercat ''+STYP;''Master ''+string(MID)+'' Pos ''+string(SLP);''Alias ''+string(SLA)],sz(1),sz(2),''fill'');']
-
+    if use5 then
+        gr_i=['xstringb(orig(1),orig(2),[''Ethercat'';''EL331X''],sz(1),sz(2),''fill'');'];
+    else
+        gr_i=['xstringb(orig(1),orig(2),[''Ethercat ''+STYP;''Master ''+string(MID)+'' Pos ''+string(SLP);''Alias ''+string(SLA)],sz(1),sz(2),''fill'');'];
+    end
     x=standard_define([4 2],model,exprs,gr_i)
     x.graphics.id=["EL331X"]
   end     	

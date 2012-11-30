@@ -17,8 +17,8 @@
 // Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA//
 // ====================================================================
 
-function smtype = getslavedesc_getsmtype(slave_desc,slave_typeid,smindex)
-  CByte = getslavedesc_SmCByte(slave_desc,slave_typeid,smindex);
+function smtype = getslavedesc_getsmtype(dev_desc, rootkey, smindex)
+  CByte = getslavedesc_SmCByte(dev_desc, rootkey, smindex);
   value = modulo(CByte,16);
   select value
      case 0 then
@@ -30,4 +30,5 @@ function smtype = getslavedesc_getsmtype(slave_desc,slave_typeid,smindex)
      else
      smtype = -1; //Unknown Error
   end
+  //mprintf("getslavedesc_getsmtype(%s, %d) --> %d\n", rootkey, smindex, smtype);  
 endfunction

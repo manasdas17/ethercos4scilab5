@@ -16,18 +16,25 @@
 // along with Etherlab; if not, write to the Free Software
 // Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA//
 // ====================================================================
-macros_dir_utils = get_absolute_file_path('buildmacros.sce');
-genlib('etherlab_sd_utils',macros_dir_utils,%t,%t);
 
-tbx_build_macros('etlbase', get_absolute_file_path('buildmacros.sce')+"/etherlab_base_scicos");
-//tbx_build_palette(get_absolute_file_path('buildmacros.sce')+"/etherlab_base_scicos");
-create_palette(get_absolute_file_path('buildmacros.sce')+"/etherlab_base_scicos");
-// clear variables on stack
-clear getsave;
-clear genlib;
-clear cd;
-clear macros_dir_utils;
-// ====================================================================
-clear tbx_build_macros;
-clear tbx_build_palette;
-// ====================================================================
+function buildmacros()
+    macros_dir_utils = get_absolute_file_path('buildmacros.sce');
+    genlib('etherlab_sd_utils',macros_dir_utils,%t,%t);
+
+    tbx_build_macros('etlbase', get_absolute_file_path('buildmacros.sce')+"/etherlab_base_scicos");
+    // Make the palette for this module
+    try 
+        getversion('scilab');
+        usexpalette = %T;       // scilab >= 5
+    catch
+        usexpalette = %F;       // scilab < 5
+    end;
+    if usexpalette then
+        make_xpalette(macros_dir_utils, "etherlab_base", "etherlab_base_scicos");
+    else
+        create_palette(macros_dir_utils + "/etherlab_base_scicos");
+    end
+endfunction
+
+buildmacros();
+clear buildmacros;  //Clean the stack

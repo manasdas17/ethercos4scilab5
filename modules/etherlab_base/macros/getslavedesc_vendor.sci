@@ -18,5 +18,7 @@
 // ====================================================================
 
 function vendorid = getslavedesc_vendor(slave_desc)
-    vendorid = slave_desc.Vendor.Id;
+    // vendorid = slave_desc.Vendor.Id;
+    vendorid = getnum(slave_desc(find(slave_desc == 'Vendor.Id'),2));
+    //mprintf("getslavedesc_vendor --> %d\n", vendorid);
 endfunction

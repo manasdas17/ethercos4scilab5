@@ -8,6 +8,7 @@ struct TempFuncDev{
 	int var2;
 };
 
+/* flag == 4*/
 static int init(scicos_block *block)
 {
   struct FlagTestDev * comdev = (struct FlagTestDev *) malloc(sizeof(struct FlagTestDev));
@@ -20,8 +21,7 @@ static int init(scicos_block *block)
   return 0;
 }
  
-
-
+/* flag == 0 */
 static int state(scicos_block *block)
 {
   struct FlagTestDev * comdev = (struct FlagTestDev *) (*block->work);
@@ -35,6 +35,8 @@ static int state(scicos_block *block)
 
   return 0;
 }
+
+/* flag == 2 */
 static int in(scicos_block *block)
 {
 struct FlagTestDev * comdev = (struct FlagTestDev *) (*block->work);
@@ -46,38 +48,40 @@ static int inout(scicos_block *block)
   struct FlagTestDev * comdev = (struct FlagTestDev *) (*block->work);
   int i;    
      if (get_scicos_time()==comdev->time){
-	comdev->step++;
-    } else {
-	comdev->time=get_scicos_time();
-	comdev->step=1;
-    }
-
+	    comdev->step++;
+     } else {
+	    comdev->time=get_scicos_time();
+	    comdev->step=1;
+     }
      printf("Flag 1: update output, step=%d, t=%f\n",comdev->step,comdev->time);
-if (GetNin(block)>0){
- double *u1 = GetRealInPortPtrs(block,1);
- comdev->data=u1[0];
-}
-if (GetNout(block)>0){
-  double *y1 = GetRealOutPortPtrs(block,1);
-  y1[0]=comdev->data;
-}
+
+     if (GetNin(block)>0){
+         double *u1 = GetRealInPortPtrs(block,1);
+         comdev->data=u1[0];
+     }
+     if (GetNout(block)>0){
+         double *y1 = GetRealOutPortPtrs(block,1);
+         y1[0]=comdev->data;
+     }
 
   return 0;
 }
+
+/* flag == 3 */
 static int eventout(scicos_block *block)
 {
-  struct FlagTestDev * comdev = (struct FlagTestDev *) (*block->work);
-     if (get_scicos_time()==comdev->time){
-	comdev->step++;
+    struct FlagTestDev * comdev = (struct FlagTestDev *) (*block->work);
+    if (get_scicos_time()==comdev->time){
+	   comdev->step++;
     } else {
-	comdev->time=get_scicos_time();
-	comdev->step=1;
+	   comdev->time=get_scicos_time();
+	   comdev->step=1;
     }
-     printf("Flag 3: update event output, step=%d, t=%f\n",comdev->step,comdev->time);
-
-  return 0;
+    printf("Flag 3: update event output, step=%d, t=%f\n",comdev->step,comdev->time);
+    return 0;
 }
 
+/* flag == 5 */
 static int end(scicos_block *block)
 {
   struct FlagTestDev * comdev = (struct FlagTestDev *) (*block->work);
@@ -86,9 +90,9 @@ static int end(scicos_block *block)
   return 0;
 }
 
+/* This is the (sci|x)cos computational function being called */
 void rt_tempfunc(scicos_block *block,int flag)
 {
-
   if (flag==0){    
     state(block);     /* update stats */
   }

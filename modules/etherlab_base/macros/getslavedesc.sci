@@ -18,8 +18,7 @@
 // ====================================================================
 
 function  slavedesc = getslavedesc(filename)
-   //scilab_basename =  SCI
-   //slavedesc_path = [scilab_basename+'/contrib/etherlab/modules/etherlab_base/slave_descriptions/'+filename+'_v6.dat']
-   slavedesc_path = [getenv('ETLPATH')+'/modules/etherlab_base/slave_descriptions/'+filename+'_v6.dat']
+   //mprintf("getslavedesc %s\n", filename);
+   slavedesc_path = [getenv('ETLPATH')+'/modules/etherlab_base/slave_descriptions/'+filename+'.dat']
    load(slavedesc_path);
 endfunction  

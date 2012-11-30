@@ -19,13 +19,23 @@
 macros_dir_utils = get_absolute_file_path('buildmacros.sce');
 genlib('etherlab_rt_utils',macros_dir_utils,%t,%t);
 
-create_palette(get_absolute_file_path('buildmacros.sce'));
+try 
+    getversion('scilab');
+    usexpalette = %T;       // scilab >= 5
+catch
+    usexpalette = %F;       // scilab < 5
+end;
+if usexpalette then
+    make_xpalette(macros_dir_utils, "etherlab_scicosrt", "");
+else
+    create_palette(macros_dir_utils);
+end
+
 // clear variables on stack
-clear getsave;
 clear genlib;
-clear cd;
 clear macros_dir_utils;
 // ====================================================================
 clear tbx_build_macros;
-clear tbx_build_palette;
+clear create_palette;
+clear make_xpalette;
 // ====================================================================

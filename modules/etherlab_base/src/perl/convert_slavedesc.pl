@@ -2,6 +2,7 @@
 #/******************************************************************************
 # *
 # *  Copyright (C) 2008-2009  Andreas Stewering-Bone, Ingenieurgemeinschaft IgH
+# *  Copyright (C) 2012       Len Remmerswaal,        Revolution Controls
 # *
 # *  This file is part of the IgH EtherLAB Scicos Toolbox.
 # *  
@@ -50,7 +51,7 @@ sub print_debug
 
 sub dohelp {
     print 
-        "XML to Scilab Struct Parser\n\n", 
+        "XML to Scilab matrix parser\n\n", 
         "usage: $0 [-h] [-f Inputfile.xml]\n\n", 
 	"-h: this help\n",
 	"-f: Inputfile\n";
@@ -74,6 +75,72 @@ sub getnum
 
 sub is_numeric { defined getnum($_[0]) }
 
+
+# Encapsulate a key value pair in a (bunch of) scilab statements.
+# Observed: - Appending each (key,value) pair to slavedesc individually makes scilab very slow.
+#           - Appending all (key, value) pairs in one giant statement makes scilab choke after some 800+ pairs.
+# This routine appends at most 500 in one bunch, then starts another statement.
+# Call this with an empty key ('') to wrap up scilab generation up before closing the file. Use the value to 
+sub dump_line
+{
+    use feature 'state';
+    state $lines = 0;
+    state $chunks = 0;
+
+    my ($outputfilehandle, $key, $value) = @_;
+
+    if (length $key != 0){
+        if ( !($lines % 500) ){
+            # Begin a new scilab statement, i.e. a new chunk
+            print $outputfilehandle "];\n" if $lines != 0;           # Close the previous one if needed
+            $chunks++;
+            print $outputfilehandle "slavedesc" . $chunks . " = [\'" . $key . "\', \'" . $value . "\'..\n";
+        }
+        else {
+            # Just output another line into the chunk
+            print $outputfilehandle     "     ; \'" . $key . "\', \'" . $value . "\'..\n";
+        }
+        $lines++;
+    }
+    else {  # length $key == 0
+        # Last line has been done. Close things up.
+        print $outputfilehandle "];\n";                                 # Close the last chunk
+        print $outputfilehandle "slavedesc = [";                        # Start naming the final variable
+        for (my $i = 1; $i < $chunks; $i++){
+            print $outputfilehandle "slavedesc" . $i . "; ";            # Concatenate all chunks but 1.
+        }
+        print $outputfilehandle "slavedesc" . $chunks . "];\n";         # Concatenate last chunk,
+        for (my $i = 1; $i <= $chunks; $i++){
+            print $outputfilehandle "clear slavedesc" . $i . ";\n";     # clear all chunk variables
+        }
+        print $outputfilehandle "save(\'" . $datfile . "\', slavedesc);\n";
+        
+    }
+    return undef;
+}
+
+# If a prospective key matches any item in this list, it is not output. Use wisely.
+my @prune = (qr/^Descriptions\.Devices\.Device\(\d+\)\.Profile/,
+             qr/ImageData/,
+             qr/VendorSpecific/);
+             
+# Some items can have a text only in some instances, and have an attribute also in other instances.
+# This would make then appear as .../node in one place and as.../node/TextContent in another.
+# For any leaf node that matches this list, a TextContent node is always created.
+# Doing this for all text nodes is 
+#my @forceText = (qr/DataType$/);
+
+sub inList
+{
+    my ($searchStr, @aList) = @_;
+    my $found = 0;
+    foreach my $pruneStr (@aList){
+        $found = 1, last if $searchStr =~ /$pruneStr/;
+    }
+    #print $searchStr . ": " . $found, "\n";
+    $found;
+}
+
 sub dump_nodes
 {
     my ($node,$outputfilehandle) = @_;
@@ -83,44 +150,57 @@ sub dump_nodes
     my $redname;
     my $attr;
     my $subnode;
+    #print $node->nodeName, $node->nodePath(), "\n";
+    
     if($node->nodeName eq '#text' or $node->nodeName eq '#cdata-section')
     {
+ 
       $replacestring = $node->parentNode->nodePath();     # Get owner of the text
       $replacestring =~ s/\//./g;                         # replace all"/" with .
       $replacestring =~ s/\[/\(/g;                        # replace all "[" with "("
-      $replacestring =~ s/\]/\)/g;                        # right
+      $replacestring =~ s/\]/\)/g;                        # ...exactly.
       $replacestring =~ s/^\.//;                          # remove all leading dots
+      $replacestring =~ s/^EtherCATInfo\.//;              # Remove the uninformative leading EtherCATInfo, if present
       $redname = $node->nodePath();                       # path of the text node
       $redname =~ s/\/text\(\)//;                         # remove "/text()"
 
-      # In cases where the node has text only, the nodename serves as the identifier
+      return if &inList($replacestring, @prune);
+
+      # In cases where the node has text only, the nodename serves as the leaf identifier
       # In cases where there are only attributes, the nodename is not a leaf identifier
       # in cases where we have both, we invent an attribute "TextContent" that holds the text
-      if(($redname eq $node->parentNode->nodePath()) && ($node->parentNode->hasAttributes))
-      {
-          $replacestring = $replacestring . ".TextContent";
-      }
+      # In cases where the node is in the doubleText array, we do both.
+ #     if(($redname eq $node->parentNode->nodePath()) && ($node->parentNode->hasAttributes))
+ #     {
+ #         $replacestring = $replacestring . ".TextContent";
+ #     }
 
       # Now we can analyze the value of the item.
       if($node->textContent =~/[a-zA-Z0-9\#]+/)           # if we have one or more alphanumerical or hash characters
       {
           if(&is_numeric($node->textContent))
           {
-              print $outputfilehandle $replacestring . "=" . $node->textContent . ";\n";
+          	  $replacevalue = $node->textContent;
           }
           else
           {
               if($node->textContent =~/\#x/)              #Hex-String
               {
-                  $replacevalue = $node->textContent;
-                  $replacevalue =~ s/\#x//;               # Strip the hex leader "#x"
-                  print $outputfilehandle $replacestring . "=hex2dec(\'" . $replacevalue . "\');\n";
+                  $replacevalue = $node->textContent;     # pass hex strings as is: let scilab detect hex
               }
               else
               {
-                  print $outputfilehandle $replacestring ."=\'" . $node->textContent ."\';\n";
+              	  $replacevalue = $node->textContent;
+              	  $replacevalue =~ s/\n/\\n/g;				  # replace a \n symbol with a \ and an n symbol
+                  $replacevalue =~ s/(\'|\")/$1$1/g;    # Quote any quote
               }
           }
+          &dump_line($outputfilehandle, $replacestring, $replacevalue);
+#          if( &inList($replacestring) ){
+#          	  # this node is known to handle differently in different places. Add an escape.
+#          	  $replacestring .= "TextContent";
+#           	  &dump_line($outputfilehandle, $replacestring, $replacevalue);
+#          }
       }
     }
 
@@ -128,27 +208,34 @@ sub dump_nodes
     {
         foreach $attr ( $node->attributes ) 
         {
+            next if $attr->name =~ /:/;                   # ignore namespace specifiers
+
             $replacestring = $node->nodePath();
-            $replacestring =~ s/\//./g;
-            $replacestring =~ s/\[/\(/g;
-            $replacestring =~ s/\]/\)/g;
-            $replacestring =~ s/^\.//;
-            if(&is_numeric($attr->value))
+            $replacestring =~ s/\//./g;                   # Replace '/' with '.'
+            $replacestring =~ s/\[/\(/g;                  # Replace [ with (
+            $replacestring =~ s/\]/\)/g;                  #...yeap
+            $replacestring =~ s/^\.//;                    # Remove leading dots
+            $replacestring =~ s/^EtherCATInfo\.//;        # Remove the uninformative leading EtherCATInfo, if present
+            
+      		return if &inList($replacestring, @prune);
+      		
+    	    if(&is_numeric($attr->value))
             {
-                print $outputfilehandle $replacestring . "." . $attr->name . "=" . $attr->value . ";\n";
+                &dump_line($outputfilehandle, $replacestring . "." . $attr->name, $attr->value);
             }
             else
             {
                 if($attr->value =~/\#x/) #Hex-String
                 {
                     $replacevalue = $attr->value;
-                    $replacevalue =~ s/\#x//;
-                    print $outputfilehandle $replacestring . "." . $attr->name . "=hex2dec(\'" . $replacevalue . "\');\n";
                 }
                 else
                 {
-                    print $outputfilehandle $replacestring ."." . $attr->name . "=\'" . $attr->value ."\';\n";
+                    $replacevalue = $attr->value;
+               	    $replacevalue =~ s/\n/\\n/g;				# replace a \n symbol with a \ and an n symbol
+                    $replacevalue =~ s/(\'|\")/$1$1/g;  # double any quote
                 }
+                &dump_line( $outputfilehandle, $replacestring ."." . $attr->name, $replacevalue);
             }
         }
     }
@@ -159,39 +246,45 @@ sub dump_nodes
     }
 }
 
+# List all possible file leaders and the expected replacement file leader.
+# Mostly, the replacement file leader will be "EtherCATInfo_"
+my %filenameleader = ("beckhoff "    => "EtherCATInfo_",
+                      "temposonics_" => "EtherCATInfo_");
 
 my %opts = (
 	    h => 0,
 	    f => '',
             );
 
-
 getopts('hf:', \%opts);
 
 &dohelp if $opts{'h'};
+&dohelp if not $opts{'f'};
 
 $inputfile=$opts{'f'};
 $outputfile = $inputfile;
-$datfile = $outputfile;
+$outputfile =~ tr/[A-Z]/[a-z]/;
+foreach my $leader (keys %filenameleader)
+{
+    $outputfile =~ s/$leader/$filenameleader{$leader}/i;
+   #$outputfile =~ s/beckhoff /EtherCATInfo_/;
+}
 $outputfile =~s/ //g;
 $outputfile =~s/\.xml/\.sce/;
-$datfile =~s/\.xml/\.dat/;
+$datfile = $outputfile;
+$datfile =~ s/\.sce/\.dat/;
 
-# Erzeuge ein Parser Objekt
+# Get a parser object
 my $parser = XML::LibXML->new(validation => 0);
-# Parse die XML Datei, die der Anwender als Parameter uebergibt
+# Parse the XML file, passed by the user's parameter
 my $doc = $parser->parse_file($inputfile);
 
-
-#Open Outputfile
+#Open outputfile
 $outputfilehandle = IO::File->new("> $outputfile") 
-    or print_debug("Error","Kann die Datei $outputfile nicht schreiben!\n");
+    or print_debug("Error","Cannot write file to $outputfile!\n");
 
-
-# Gib alle Elementnamen angefangen beim Root-Element aus
+# Dish out all element names, starting with the root element.
 &dump_nodes($doc->getDocumentElement,$outputfilehandle);
-
-print $outputfilehandle "save(\'$datfile\',\'EtherCATInfo\');\n";
-#print $outputfilehandle "clear EtherCATInfo\n;
+&dump_line($outputfilehandle, '', $datfile);    # Close any pending statement and put in the save instruction to file
+#print $outputfilehandle "];";
 $outputfilehandle->close();
-

@@ -17,13 +17,9 @@
 // Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA//
 // ====================================================================
 
-function numentry = getslavedesc_SmPdonEntry(slave_desc,index,direction,pdoindex)
+function numentry = getslavedesc_SmPdonEntry(pdo_desc, pdo_key)
     numentry = 0;
-    if direction == 1 //TxPdo
-      pdo = slave_desc.Descriptions.Devices.Device(index).TxPdo(pdoindex);
-    end
-    if direction == 2 //RxPdo
-      pdo = slave_desc.Descriptions.Devices.Device(index).RxPdo(pdoindex);
-    end
-    numentry = max(size(pdo.Entry));
+    key = "/" + getslavedesc_makegrepkey(pdo_key) + "Entry(\(\d+\))?\.Index" + "/"
+    numentry = max(size(grep(slave_desc(:,1)', key, "r")));
+    //mprintf("getslavedesc_SmPdonEntry(%s) --> %d\n", pdo_key, numentry);
 endfunction

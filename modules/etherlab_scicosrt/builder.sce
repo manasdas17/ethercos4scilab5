@@ -29,6 +29,7 @@ if (exists('buildDetails')==0) then
 	buildDetails='';
 end
 module_dir = get_absolute_file_path('builder.sce');
+
 try
  getversion('scilab');
  if ~with_module('development_tools') then
@@ -51,30 +52,22 @@ end;
 // ====================================================================
 
 try
+    tbx_build_loader(TOOLBOX_NAME, module_dir);
+    tbx_builder_macros(module_dir);
+    tbx_builder_src(module_dir);
+    tbx_builder_help(module_dir);
 
-
-tbx_build_loader(TOOLBOX_NAME, module_dir);
-
-
-
-
-tbx_builder_macros(module_dir);
-
-
-tbx_builder_src(module_dir);
-tbx_builder_help(module_dir);
-
-
-listSuccessful($+1)=TOOLBOX_NAME;
-status=sprintf(' |   %s                         ',TOOLBOX_NAME);
-
+    listSuccessful($+1)=TOOLBOX_NAME;
+    status=sprintf(' |   %s                         ',TOOLBOX_NAME);
 catch
-   status=sprintf(' !                         %s ',TOOLBOX_NAME);
-    printf('Etherlab %s module could not be build!',TOOLBOX_NAME);
+    [str,n,line,func]=lasterror(%f);
+    mprintf("Error message: %s\nOn line %d of %s\n", str, line, func);
+    mprintf('Etherlab %s module could not be built!',TOOLBOX_NAME);
+
     listFailed($+1)=TOOLBOX_NAME;
+    status=sprintf(' !                         %s ',TOOLBOX_NAME);
 end
 buildDetails=[buildDetails; status];
-
 
 clear tbx_builder_macros tbx_builder_src tbx_builder_gateway tbx_builder_help tbx_build_loader;
 clear module_dir;
