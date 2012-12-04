@@ -1,9 +1,6 @@
-syntax: glob
 *.bin
-*.o
-*.lo
-*.a
-*.la
+*.[oa]
+*.l[oa]
 *.lai
 *.so*
 *.htm
@@ -20,19 +17,18 @@ includes/scicos_block4_41.h
 loader.sce
 cleaner.sce
 etherlab_rc*
-/c/Makefile
 changeset_*.dif
 etherlab_base_scicos.cosf
 modules/etherlab_codegen/libs/4.3/4.3
 modules/etherlab_codegen/libs_codegen
 modules/etherlab_scicosrt/macros/macros.cosf
-/html/**
 master_help.xml
 make.txt
+jar*
+#/c/Makefile
+#/html/**
 
-syntax: regexp
-help/.*/scilab.*$
-jar/.*$
-slave_descriptions/EtherCATInfo.*\.sce$
-slave_descriptions/Beckhoff (AX|BK|CU|CX|EM|EP|Et|FB|FC).*.xml
+#help/*/scilab.*
+#slave_descriptions/EtherCATInfo.*\.sce$
+#slave_descriptions/Beckhoff (AX|BK|CU|CX|EM|EP|Et|FB|FC).*.xml
 
