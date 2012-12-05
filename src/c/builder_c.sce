@@ -52,10 +52,24 @@ end
 tbx_build_src(names, files, flag, get_absolute_file_path("builder_c.sce"),libs,ldflags,cflags,fflags,cc,libname,loadername,makename);
 //ilib_verbose(vlvl);
 //lines(ncl(2), ncl(1));
+
+// It looks like etherlab_basis links to this library as libetherlab.so.0
+// libetherlab.so is being created.
+// To accomodate this, create a link to the just created lib, if not already there
+libpath1 = get_absolute_file_path("builder_c.sce") + "libetherlab.so";
+libpath2 = libpath1 + ".0";
+if ~isfile(libpath2) then
+    shellstr = "ln -s " + libpath1 + " " + libpath2;
+    rcode = unix(shellstr);
+    if rcode != 0 then
+        error(msprintf("Cannot create link to %s\n", libpath1));
+    end
+end
+
 // ====================================================================
 clear tbx_build_src;
 
 clear names;
-clear files;
-clear libs;
+clear files libs flag loadername libname cflags ldflags fflags cc makename;
+clear libpath1 libpath2 shellstr rcode;
 // ====================================================================
