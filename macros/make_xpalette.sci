@@ -171,12 +171,20 @@ function my_tbx_build_blocks(module, names, subDir)
     if ~exists("scicos_diagram") then loadXcosLibs(); end
     
     sciFiles   = pathconvert(iface_path) + names + ".sci";
-    h5Files    = pathconvert(module + "images/h5/") + names + ".h5";
+    h5_tlbx    = pathconvert(module + "images/h5");
     gif_tlbx   = pathconvert(module + "images/gif");
-    gifFiles   = pathconvert(module + "images/gif/") + names + ".gif";
     svg_tlbx   = pathconvert(module + "images/svg");
-    svgFiles   = pathconvert(module + "images/svg/") + names + ".svg";
-    styleFiles = pathconvert(module + "images/svg/") + names + ".style";
+    h5Files    = h5_tlbx  + names + ".h5";
+    gifFiles   = gif_tlbx + names + ".gif";
+    svgFiles   = svg_tlbx + names + ".svg";
+    styleFiles = svg_tlbx + names + ".style";
+    
+    // Create the needed directories if not there yet.
+    tlbxs = [h5_tlbx gif_tlbx svg_tlbx];
+    for d = tlbxs(~isdir(tlbxs))
+        mkdir(d);
+    end
+    
     // Get the right number of copies of the name of this sci file
     thisFile    = sciFiles;                         // just to get the size right.
     thisFile(:) = get_function_path("make_xpalette");

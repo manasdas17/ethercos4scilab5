@@ -30,9 +30,14 @@
 
 
 use IO::File;
-use XML::LibXML;
-use strict;
+eval{ require XML::LibXML };
+if ($@) {
+    die "Error: Cannot load 'XML::LibXML'.\nPlease install perl library libxml (libxml-libxml-perl on Debian).\n";
+} else {
+    import XML::LibXML;
+}
 use Getopt::Std;
+use strict;
 
 
 my $inputfile;

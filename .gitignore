@@ -22,6 +22,7 @@ etherlab_base_scicos.cosf
 modules/etherlab_codegen/libs/4.3/4.3
 modules/etherlab_codegen/libs_codegen
 modules/etherlab_scicosrt/macros/macros.cosf
+modules/*/help/en_US/scilab_en_US_help/
 master_help.xml
 make.txt
 jar*
@@ -31,4 +32,3 @@ jar*
 #help/*/scilab.*
 #slave_descriptions/EtherCATInfo.*\.sce$
 #slave_descriptions/Beckhoff (AX|BK|CU|CX|EM|EP|Et|FB|FC).*.xml
-
