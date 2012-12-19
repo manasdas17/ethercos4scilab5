@@ -19,7 +19,7 @@
 
 names =   [ 'rt_tempfunc';]; //defined in loader.sce
 
-if ~MSDOS then
+if ~(getos() == "Windows") then
  files     = ["template_function.o"];
 else
   files     = ["template_function.o"];
@@ -29,21 +29,21 @@ flag      = "c";
 makename  = "Makefile";
 loadername= "loader.sce";
 libname   = "_your_name";
-if ~MSDOS then
+if ~(getos() == "Windows") then
   cflags    = "-D_TTY_POSIX_ -fno-stack-protector     -I"+get_absolute_file_path('builder_c.sce')+"../../../../includes ";
 else
      cflags    = "  $(CC_PICFLAGS) -I"+SCI+"/routines   -I../includes";
 end
-if ~MSDOS
+if ~(getos() == "Windows")
 	ldflags   = "-lpthread -lstdc++ -lrt -lm";
 else
 ldflags   = "Winmm.lib";
 end
 fflags    = [];
-if ~MSDOS then
+if ~(getos() == "Windows") then
   cc        = "gcc";
 end
-if ~MSDOS then
+if ~(getos() == "Windows") then
 //  ilib_for_link(names,files, libs,flag, makename,loadername,libname, ldflags, cflags, fflags,cc);
 tbx_build_src(names, files, flag, get_absolute_file_path('builder_c.sce'),libs,ldflags,cflags,fflags,cc,libname,loadername,makename);
 

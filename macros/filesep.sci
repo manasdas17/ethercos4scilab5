@@ -1,5 +1,5 @@
 function out = filesep()
-  if ~MSDOS then
+  if ~(getos() == "Windows") then
     out='/';
   else
     out='\';

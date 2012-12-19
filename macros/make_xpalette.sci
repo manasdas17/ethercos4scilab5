@@ -21,6 +21,8 @@
 function make_xpalette(aPath, library, subDir)
     // This function replaces the use of create_palette in Scilab version >= 5.3
     // create_palette was in the 'scicos/scicos_utils' library
+    // If the svg directory contains a style file, the style file is used instead of the svg file to create the palette
+    // To stop generateBlockImage from creating an unneeded svg file, a dummy svg file is put in place next to the style file
     // See the Scilab Help for create_palette.
     // This version uses the new xcos function calls to generate an individual palette
     // aPath    : base path to the module's macros path
@@ -32,7 +34,7 @@ function make_xpalette(aPath, library, subDir)
     thisfunc = "make_xpalette";
     mprintf("Entering %s on path %s\n", thisfunc, aPath);
     
-    if argn(2) < 2 or argn(2) > 3 then
+    if argn(2) < 2 | argn(2) > 3 then
         error(msprintf(gettext("%s: Wrong number of input arguments: %d to %d expected.\n"), thisfunc, 2, 3));
     end
     if argn(2) == 2 then subDir = "", end;
@@ -78,26 +80,71 @@ function make_xpalette(aPath, library, subDir)
         msg = msprintf("No valid blocks for palette %s in directory %s\n", library, iface_path);
         error(msg);
     end
-    
+
     //Create the xcos blocks
     lisf = basename(lisf);
-    my_tbx_build_blocks(module, lisf, subDir);
+
+    // Collect the interesting file names
+    sciFiles   = pathconvert(iface_path) + lisf + ".sci";
+    h5Files    = pathconvert(module + "images/h5/")  + lisf + ".sod";
+    imgFiles   = pathconvert(module + "images/gif/") + lisf + ".gif";
+    svgFiles   = pathconvert(module + "images/svg/") + lisf + ".svg";
+    styleFiles = pathconvert(module + "images/svg/") + lisf + ".style";
+
+    // Get the right number of copies of the name of this sci file
+    thisFile    = lisf;                   // just to get the size right.
+    thisFile(:) = get_function_path("make_xpalette");
+
+    // See which files need remaking and which might just stay.
+    h5Outdated    =  makex_fileIsNewer(sciFiles, h5Files)  | makex_fileIsNewer(thisFile, h5Files );
+    gifOutdated   =  makex_fileIsNewer(sciFiles, imgFiles) | makex_fileIsNewer(thisFile, imgFiles);
+    // svg cannot be outdated if a style file is present
+    svgOutdated   = (makex_fileIsNewer(sciFiles, svgFiles) | makex_fileIsNewer(thisFile, svgFiles)) & ~isfile(styleFiles);
+    needwork      = h5Outdated | gifOutdated | svgOutdated;
+    //mprintf("h5Outdated   : %s\n", strcat(string(h5Outdated   ), " "));
+    //mprintf("gifOutdated  : %s\n", strcat(string(gifOutdated  ), " "));
+    //mprintf("svgOutdated  : %s\n", strcat(string(svgOutdated  ), " "));
+    //mprintf("needwork     : %s\n", strcat(string(needwork     ), " "));
+
+    // To make tbx_build_blocks regenerate outdated stuff, delete it.
+    deleteables = [h5Files(h5Outdated);imgFiles(gifOutdated)];
+    if deleteables <> [] then
+        deleteables = deleteables(isfile(deleteables));
+        //mprintf("Deleteables: %s\n", strcat(string(deleteables), " "));
+        for f = deleteables'
+            mdelete(f);
+        end
+    end
+    clear deleteables;
+
+    //Create a dummy svg file if a style file is present
+    dummysvg = svgFiles(isfile(styleFiles) & ~isfile(svgFiles))
+    for f = dummysvg'
+        fd = mopen(f, "w");
+        mclose(fd);
+    end
+
+    // If an item does not need work, then don't present it to tbx_build_blocks
+    buildlist = lisf(needwork);
+    //mprintf("Build list: %s\n", strcat(string(buildlist), " "));
+    // ***** Build the blocks *****
+    if ~isempty(buildlist) then
+        %zoom = 1;                      // Or generateBlockImage may crash
+        my_tbx_build_blocks(module, buildlist, iface_path);
+    end
+    clear buildlist;
     
     // Create a ready to load palette
     pal = xcosPal(library);
-    for fil = lisf'
-        h5File    = pathconvert(module + "images/h5/")  + fil + ".h5";
-        imgFile   = pathconvert(module + "images/gif/") + fil + ".gif";
-        svgFile   = pathconvert(module + "images/svg/") + fil + ".svg";
-        styleFile = pathconvert(module + "images/svg/") + fil + ".style";
-        if isfile(styleFile) then
-            aStyle = make_x_getStyle(styleFile);
+    for i = 1:size(lisf,'*')
+        if isfile(styleFiles(i)) then
+            aStyle = make_x_getStyle(styleFiles(i));
         else
-            aStyle = svgFile;
+            aStyle = svgFile(i);
         end
-        pal = xcosPalAddBlock(pal, h5File, imgFile, aStyle);
+        pal = xcosPalAddBlock(pal, h5Files(i), imgFiles(i), aStyle);
     end
-    palPath = pathconvert(module + "images/h5/") + library + ".h5";
+    palPath = pathconvert(module + "images/h5/") + library + ".sod";
     [status, msg] = xcosPalExport(pal, palPath);
     if ~status then
        mprintf(msg);
@@ -105,28 +152,22 @@ function make_xpalette(aPath, library, subDir)
        error(aMsg);
     end
     mprintf(_("Wrote %s\n"),palPath);
-  endfunction
+endfunction
 
-function my_tbx_build_blocks(module, names, subDir)
+function my_tbx_build_blocks(module, names, ifacePath)
     // Build a default block instance
-    // The original did not build gif or svg files if they already existed. This is a bug.
-    // This version does a make-like operation to determine if building these files is needed.
     //
-    // In addition:
-    // - a subDir can be given if there are other macros in the macros directory then interface files.
-    //   The interface files proper must then be collected in the subDir directory, and a 
-    //   non-empty string entered for subDir.
-    // - if a .style file is present in the images/svg directory, it is assumed that its 
-    //   content is used for xcosPallAdd's style and the svg file is not built.
+    // This version corrects a bug, and is OK for 533 and 540
+    // Define useSod with any value to cause 540 behaviour
     //
     // Calling Sequence
     //   my_tbx_build_blocks(module, names, subDir)
     //
     // Parameters
-    // module: Toolbox base directory
-    //         The directories 'macros' and 'images' must be here.
-    // names:  List of block names (sci file name without extension)
-    // subDir: (optional) Subdirectory of module/macros where the block interface files sit.
+    // module   : Toolbox base directory
+    //            The directories 'macros' and 'images' must be here.
+    // names    : List of block names (sci file name without extension)
+    // ifacePath: (optional) Directory where the block interface files sit.
 
     thisfunc = "my_tbx_build_blocks";
     
@@ -150,17 +191,17 @@ function my_tbx_build_blocks(module, names, subDir)
         error(msprintf(gettext("%s: Wrong type for input argument #%d: A string expected.\n"), thisfunc,2));
     end
 
-    if argn(2) < 3 then subDir = "", end;
-    // Checking subDir argument
-    if type(subDir) <> 10 then
+    // checking optional IfacePath argument
+    if argn(2) < 3 then 
+        ifacePath = pathconvert(module + "macros/", %t, %t);
+    end;
+    if type(ifacePath) <> 10 then
         error(msprintf(gettext("%s: Wrong type for input argument #%d: A string expected.\n"), thisfunc, 3));
     end
-    if size(subDir,"*") <> 1 then
+    if size(ifacePath,"*") <> 1 then
         error(msprintf(gettext("%s: Wrong size for input argument #%d: A string expected.\n"), thisfunc, 3));
     end
-
-    iface_path = pathconvert(module + "macros" + filesep() + subDir, %t, %t);
-    if ~isdir(iface_path) then
+    if ~isdir(ifacePath) then
         error(msprintf(gettext("%s: The directory ''%s'' doesn''t exist or is not read accessible.\n"), thisfunc, iface_path));
     end
 
@@ -170,68 +211,59 @@ function my_tbx_build_blocks(module, names, subDir)
     // load Xcos libraries when not already loaded.
     if ~exists("scicos_diagram") then loadXcosLibs(); end
     
-    sciFiles   = pathconvert(iface_path) + names + ".sci";
-    h5_tlbx    = pathconvert(module + "images/h5");
-    gif_tlbx   = pathconvert(module + "images/gif");
-    svg_tlbx   = pathconvert(module + "images/svg");
-    h5Files    = h5_tlbx  + names + ".h5";
-    gifFiles   = gif_tlbx + names + ".gif";
-    svgFiles   = svg_tlbx + names + ".svg";
-    styleFiles = svg_tlbx + names + ".style";
-    
+    names = names(:);
+    h5_tlbx    = pathconvert(module + "/images/h5");
+    gif_tlbx   = pathconvert(module + "/images/gif");
+    svg_tlbx   = pathconvert(module + "/images/svg");
+    images     = pathconvert(module + "images");
     // Create the needed directories if not there yet.
-    tlbxs = [h5_tlbx gif_tlbx svg_tlbx];
+    tlbxs      = [images h5_tlbx gif_tlbx svg_tlbx];
     for d = tlbxs(~isdir(tlbxs))
         mkdir(d);
     end
-    
-    // Get the right number of copies of the name of this sci file
-    thisFile    = sciFiles;                         // just to get the size right.
-    thisFile(:) = get_function_path("make_xpalette");
+    clear tlbxs images;
 
-    h5Outdated    = makex_fileIsNewer(sciFiles, h5Files)    | makex_fileIsNewer(thisFile, h5Files);
-    gifOutdated   = makex_fileIsNewer(sciFiles, gifFiles)   | makex_fileIsNewer(thisFile, gifFiles);
-    svgOutdated   = makex_fileIsNewer(sciFiles, svgFiles)   | makex_fileIsNewer(thisFile, svgFiles);
-    needwork      = h5Outdated | gifOutdated | (svgOutdated & ~isfile(styleFiles));
-    //mprintf("h5Outdated   : %s\n", strcat(string(h5Outdated   ), " "));
-    //mprintf("gifOutdated  : %s\n", strcat(string(gifOutdated  ), " "));
-    //mprintf("svgOutdated  : %s\n", strcat(string(svgOutdated  ), " "));
-    //mprintf("needwork     : %s\n", strcat(string(needwork     ), " "));
+    sciFiles   = pathconvert(ifacePath) + names + ".sci";
+    h5Files    = h5_tlbx  + names + ".sod";
+    gifFiles   = svg_tlbx + names + ".gif";
+    svgFiles   = svg_tlbx + names + ".svg";
 
-    if or(needwork) then
-        handle = gcf();
-        for i=1:size(sciFiles, "*")   //find(needwork)
-            mprintf("  Working on %s:\n", names(i));
-            // load the interface function
-            exec(sciFiles(i), -1);
-            // Obtain the block from the sci file
-            execstr(msprintf("scs_m = %s (''define'');", names(i)));
-            
-            // export the instance if the h5 file is outdated.
-            if h5Outdated then
-                if ~export_to_hdf5(h5Files(i), "scs_m") then
-                    error(msprintf(gettext("%s: Unable to export %s to %s.\n"),"tbx_build_blocks",names(i), h5Files(i)));
-                end
-            end
+    for i=1:size(sciFiles, "*")
+        mprintf("  Working on %s:\n", names(i));
+        // load the interface function
+        exec(sciFiles(i), -1);
 
-            block = scs_m;
-            // export a gif file if the gif file is outdated.
-            if gifOutdated(i) then
-                if ~generateMyBlockImage(block, gif_tlbx, names(i), handle, "gif", %t) then
-                    error(msprintf(gettext("%s: Unable to export %s to %s.\n"),"tbx_build_blocks",names(i), gifFiles(i)));
-                end
-            end
-
-            // export an svg file if the svg file is outdated and a style file does not exist
-            if svgOutdated(i) then 
-                if ~isfile(styleFiles(i)) then
-                    if ~generateMyBlockImage(block, svg_tlbx, names(i), handle, "svg", %f) then
-                        error(msprintf(gettext("%s: Unable to export %s to %s.\n"),"tbx_build_blocks",names(i), svgFiles(i)));
-                    end
-                end
-            end
+        // export the instance if the h5 file is outdated.
+        execstr(msprintf("scs_m = %s (''define'');", names(i)));
+        if ~export_to_hdf5(h5Files(i), "scs_m") then
+           error(msprintf(gettext("%s: Unable to export %s to %s.\n"),"tbx_build_blocks",names(i), h5Files(i)));
         end
-        delete(handle);
+        block = scs_m;
+
+        // export an image file if it doesn't exist
+        files = gif_tlbx + "/" + names(i) + [".png" ".jpg" ".gif"];
+        if ~or(isfile(files)) then
+            //mprintf("%s: Calling %s\n", thisfunc, "generateBlockImage(gif)");
+            if ~generateBlockImage(block, gif_tlbx, names(i), "gif", %t) then
+                [str,n,line,func]=lasterror();
+                mprintf("%s: Error %d: %s\n   on line %d of function %s\n",..
+                        thisfunc, n, str, line, func);
+                error(msprintf(gettext("%s: Unable to export %s to %s.\n"),"tbx_build_blocks", names(i), files(3)));
+            end
+            //mprintf("%s: Past calling %s\n", thisfunc, "generateBlockImage(gif)()");
+        end
+
+        // export a schema file if it does not exist
+        files = svg_tlbx + "/" + names(i) + [".svg" ".png" ".jpg" ".gif"];
+        if ~or(isfile(files)) then
+            //mprintf("%s: Calling %s\n", thisfunc, "generateBlockImage(svg)");
+            if ~generateBlockImage(block, svg_tlbx, names(i), handle, "svg", %f) then
+                mprintf("%s: Error %d: %s\n   on line %d of function %s\n",..
+                        thisfunc, n, str, line, func);
+                error(msprintf(gettext("%s: Unable to export %s to %s.\n"),"tbx_build_blocks", names(i), files(1)));
+            end
+            //mprintf("%s: Past calling %s\n", thisfunc, "generateBlockImage(svg)()");
+        end
     end
 endfunction
 
@@ -281,11 +313,8 @@ function [status, ierr] = makex_fileIsNewer(file1, file2)
     exist1 = isfile(file1);     
     exist2 = isfile(file2);
     status(exist1|~exist1) = %f;     // status has size of exist1 (same as file1) and is all False
-    ierr = ~(exist1|exist2);         // ierr is only true if both do not exist  
-    status(~exist2) = %t;            // if file2 does not exist, then file1 is newer 
-    info1 = fileinfo(file1);
-    info2 = fileinfo(file2);
-    for i = find(exist1 & exist2)                   // if both files exist
-        status(i) = (info1(i,6) > info2(i,6));      // compare dates
+    for i = 1:size(status,"*")
+        status(i) = (newest(file2(i), file1(i)) == 2);    // if both do not exist, status will be %f
     end
+    ierr = ~(exist1|exist2);         // ierr is only true if both do not exist  
 endfunction

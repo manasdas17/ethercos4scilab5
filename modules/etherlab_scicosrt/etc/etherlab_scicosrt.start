@@ -60,7 +60,7 @@ try
     load(pathmacros + "lib");
     if use5 then
       loadXcosLibs();
-      palette_name = pathconvert(root_tlbx + "/images/h5") + modules_name + ".h5";
+      palette_name = pathconvert(root_tlbx + "/images/h5") + modules_name + ".sod";
       //mprintf("**1**: %s: %s\n", "palette_name", palette_name);
       [status, msg] = xcosPalAdd(palette_name, "Etherlab");
       //mprintf("**2**\n");

@@ -379,7 +379,7 @@ function [status_id,status_msg,status_details] = test_run_onetest(module,test,te
 	diafile     = pathconvert(fullPath+".dia",%f,%f);
 	reffile     = pathconvert(fullPath+".dia.ref",%f,%f);
 	
-	if MSDOS then
+	if (getos() == "Windows") then
 		altreffile = pathconvert(fullPath+".win.dia.ref",%f,%f);
 	else
 		altreffile = pathconvert(fullPath+".unix.dia.ref",%f,%f);
@@ -512,14 +512,14 @@ function [status_id,status_msg,status_details] = test_run_onetest(module,test,te
 	mputl(txt,tmp_tstfile);
 	
 	// Gestion de l'emplacement de bin/scilab
-	if (~MSDOS) & (fileinfo(SCI+"/bin/scilab")==[]) then
+	if (~(getos() == "Windows")) & (fileinfo(SCI+"/bin/scilab")==[]) then
 		SCI_BIN = strsubst(SCI,'share/scilab','');
 	else
 		SCI_BIN = SCI;
 	end
 	
 	// Build the command to launch
-	if MSDOS then
+	if (getos() == "Windows") then
 		test_cmd = "( """+SCI_BIN+"\bin\scilex.exe"+""""+" "+launch_mode+" -nb -args -nouserstartup -f """+tmp_tstfile+""" > """+tmp_resfile+""" ) 2> """+tmp_errfile+"""";
 	else
 		test_cmd = "( "+SCI_BIN+"/bin/scilab "+launch_mode+" -nb -args -nouserstartup -f "+tmp_tstfile+" > "+tmp_resfile+" ) 2> "+tmp_errfile;
@@ -620,7 +620,7 @@ function [status_id,status_msg,status_details] = test_run_onetest(module,test,te
 		dia = strsubst(dia,TMPDIR ,"TMPDIR");
 		dia = strsubst(dia,TMPDIR1,"TMPDIR");
 		
-		if MSDOS then
+		if (getos() == "Windows") then
 			strsubst(dia,strsubst(TMPDIR ,"\","/"),"TMPDIR");
 			strsubst(dia,strsubst(TMPDIR1,"\","/"),"TMPDIR");
 			dia = strsubst(dia,strsubst(getshortpathname(TMPDIR) ,"\","/"),"TMPDIR");
@@ -688,7 +688,7 @@ function [status_id,status_msg,status_details] = test_run_onetest(module,test,te
 				ref( find(part(ref,(1:2))=="//") ) = [];
 				
 				if or(ref<>dia) then
-					if MSDOS then
+					if (getos() == "Windows") then
 						status_msg     = "failed  : dia and ref are not equal";
 						status_details = sprintf("     Compare the following files : \n     - %s\n     - %s",diafile,reffile);
 						status_id      = 4;

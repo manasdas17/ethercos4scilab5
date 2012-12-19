@@ -21,7 +21,7 @@
 //mprintf("Entering etherlab_base builder_c.sce\n");
 
 names =   [ 'etl_scicos']; // ; Seperator defined in loader.sce
-files     = ["etl_scicos"]; // ; Seperator
+files     = ["etl_scicos.c"]; // ; Seperator
 
 libs      = [];
 flag      = "c";

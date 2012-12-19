@@ -30,7 +30,7 @@ end
 
 //=====================================================================
 //Check for Host System
-if MSDOS then
+if (getos() == "Windows") then
     disp('Windows is not supported');
     return; 
 end;
@@ -48,7 +48,7 @@ try
     includefn = "scicos_block4_3.h";
   elseif find(version == ['4.1.2', 'Gtk-2007-12-07']) then
     includefn = "scicos_block4_12.h";
-  elseif find(version == ['5.3.3']) then
+  elseif find(version == ['5.3.3' '5.4.0']) then
     includefn = "scicos_block4_" + version + ".h";
   else
     disp("Scilab Version ''" + version + "'' not supported");
@@ -80,7 +80,6 @@ try
 catch
   error('macros dir not available!');
 end
-
 // ====================================================================
 TOOLBOX_NAME = 'etherlab_toolbox';
 TOOLBOX_TITLE = 'EtherCos Toolbox for scilab';
@@ -94,8 +93,8 @@ chdir(toolbox_dir);
  try
     tbx_builder_src(toolbox_dir);
     tbx_build_loader(TOOLBOX_NAME, toolbox_dir);
-   listSuccessful($+1)='ethercos main';
-   status=sprintf(' |   %s                         ',TOOLBOX_NAME);
+    listSuccessful($+1)='ethercos main';
+    status=sprintf(' |   %s                         ',TOOLBOX_NAME);
  catch
     [str,n,line,func]=lasterror();
     status=sprintf(' !                         %s ',TOOLBOX_NAME);

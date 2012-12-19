@@ -15,6 +15,7 @@ lib
 includes/scicos_block4.h
 includes/scicos_block4_41.h
 loader.sce
+unloader.sce
 cleaner.sce
 etherlab_rc*
 changeset_*.dif

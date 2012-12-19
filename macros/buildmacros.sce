@@ -26,7 +26,15 @@ try
     use5 = %T;
 end
 if use5 then
-    genlib('etherlab_lib',macros_dir_etherlab_tlbx,%f,%t, names5); // Just need a few
+    try
+        genlib('etherlab_lib',macros_dir_etherlab_tlbx,%f,%t, names5); // Just need a few
+    catch
+        [str, n, line, func] = lasterror(%f);
+        msg = msprintf("%s: Error %d: %s\n    on line %d of %s\n",..
+                        macros_dir_etherlab_tlbx, n, str, line, func);
+        //mprintf("%s", msg);
+        error(msg);
+    end
 else
     names4 = get_sci4_names(macros_dir_etherlab_tlbx, names5);
     genlib('etherlab_lib',macros_dir_etherlab_tlbx,%f,%t, names4);
