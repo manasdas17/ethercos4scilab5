@@ -48,7 +48,7 @@ try
     includefn = "scicos_block4_3.h";
   elseif find(version == ['4.1.2', 'Gtk-2007-12-07']) then
     includefn = "scicos_block4_12.h";
-  elseif find(version == ['5.3.3' '5.4.0']) then
+  elseif find(version == ['5.4.0']) then
     includefn = "scicos_block4_" + version + ".h";
   else
     disp("Scilab Version ''" + version + "'' not supported");

@@ -41,7 +41,7 @@ try
   if from then
       version = part(version, to+1:length(version));    // strip leading '[sS]ilab-'
   end;  
-  if find(version == ['4.1.2', '4.3', '5.3.3', '5.4.0']) then
+  if find(version == ['4.1.2', '4.3', '5.4.0']) then
     libnm = '/'+version;
   elseif find(version == ['Gtk-2007-12-07']) then
     libnm = '/4.1.2';
