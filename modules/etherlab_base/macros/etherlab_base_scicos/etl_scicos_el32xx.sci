@@ -83,7 +83,7 @@ case 'set' then
    //Datatype Index Subindex Value
    slave_sdoconfig = int32([]);
    valid_slave = %f; //Flag for Loop handling
-   slave_desc = getslavedesc('EtherCATInfo_el3xxx');
+   slave_desc = getslavexdesc('Beckhoff EL3xxx');
 
    //Clear Channel List
    clear channel
@@ -367,13 +367,14 @@ case 'set' then
    end;
 
 
-   dev_desc = getslavedesc_checkslave(slave_desc,slave_type,slave_revision);
+   dev_desc = getslavex_checkslave(slave_desc,slave_type,slave_revision);
    if ~isempty(dev_desc) then
-   	slave_config= getslavedesc_getconfig(slave_desc, dev_desc);
+   	slave_config= getslavex_getconfig(slave_desc, dev_desc);
     slave_vendor = slave_config.vendor;              //getslavedesc_vendor(slave_desc);
     slave_productcode = slave_config.productcode;    //getslavedesc_productcode(slave_desc,slave_typeid);
     slave_generic = int32([slave_vendor; slave_productcode]);
 	[slave_smconfig,slave_pdoconfig,slave_pdoentry,valid_slave] = getslavedesc_buildopar(slave_config,0,0); //Default Configurartion
+    getslavexdiscard(slave_desc);
    else
 	disp('Can not find valid Configuration.');
    end
@@ -513,15 +514,16 @@ case 'define' then
 
 	
   //Set Default Slave
-  slave_desc = getslavedesc('EtherCATInfo_el3xxx');	
+  slave_desc = getslavexdesc('Beckhoff EL3xxx');	
   slave_revision = hex2dec('00100000');
-  dev_desc = getslavedesc_checkslave(slave_desc,slave_type,slave_revision);
-  slave_config= getslavedesc_getconfig(slave_desc, dev_desc);	
+  dev_desc = getslavex_checkslave(slave_desc,slave_type,slave_revision);
+  slave_config= getslavex_getconfig(slave_desc, dev_desc);	
   slave_vendor = slave_config.vendor;           //getslavedesc_vendor(slave_desc);
   slave_productcode = slave_config.productcode; //getslavedesc_productcode(slave_desc,slave_typeid);
   slave_generic = int32([slave_vendor; slave_productcode]);
   [slave_smconfig,slave_pdoconfig,slave_pdoentry,valid_slave] = getslavedesc_buildopar(slave_config,0,0); //Default Configurartion 
-   //Index subindex vectorlength valuetype bitlength Channelno Direction TypeCode Fullrange Scale Offset
+  getslavexdiscard(slave_desc);
+  //Index subindex vectorlength valuetype bitlength Channelno Direction TypeCode Fullrange Scale Offset
   clear channel;
   channel(1).index = hex2dec('6000');
   channel(1).subindex = hex2dec('11');

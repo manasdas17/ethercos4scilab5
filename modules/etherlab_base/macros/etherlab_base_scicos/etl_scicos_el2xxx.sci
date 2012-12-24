@@ -64,7 +64,7 @@ case 'set' then
    //Datatype Index Subindex Value
    slave_sdoconfig = int32([]);
    valid_slave = %f; //Flag for Loop handling
-   slave_desc = getslavedesc('EtherCATInfo_el2xxx');
+   slave_desc = getslavexdesc('Beckhoff EL2xxx');
        //Index subindex vectorlength valuetype bitlength Channelno Direction TypeCode Fullrange Scale Offset
 	//valuetype:
 	//    si_double_T = 0, si_single_T =1, si_uint8_T = 2, si_sint8_T = 3, 
@@ -370,13 +370,14 @@ case 'set' then
 	disp('No valid Mapping Configuration');
    end;
 
-   dev_desc = getslavedesc_checkslave(slave_desc,slave_type,slave_revision);
+   dev_desc = getslavex_checkslave(slave_desc,slave_type,slave_revision);
    if ~isempty(dev_desc) then
-    slave_config= getslavedesc_getconfig(slave_desc, dev_desc);
+    slave_config= getslavex_getconfig(slave_desc, dev_desc);
     slave_vendor = slave_config.vendor;              //getslavedesc_vendor(slave_desc);
     slave_productcode = slave_config.productcode;    //getslavedesc_productcode(slave_desc,slave_typeid);
     slave_generic = int32([slave_vendor; slave_productcode]);
     [slave_smconfig,slave_pdoconfig,slave_pdoentry,valid_slave] = getslavedesc_buildopar(slave_config,0,0); //Default Configurartion
+    getslavexdiscard(slave_desc);
    else
     disp('Can not find valid Configuration.');
    end
@@ -442,14 +443,15 @@ case 'define' then
   model.dep_ut=[%t, %f]
 
   //Set Default Slave
-  slave_desc = getslavedesc('EtherCATInfo_el2xxx');	
+  slave_desc = getslavexdesc('Beckhoff EL2xxx');	
   slave_revision = 0;
-  dev_desc = getslavedesc_checkslave(slave_desc,slave_type,slave_revision);
-  slave_config= getslavedesc_getconfig(slave_desc, dev_desc);   
+  dev_desc = getslavex_checkslave(slave_desc,slave_type,slave_revision);
+  slave_config= getslavex_getconfig(slave_desc, dev_desc);   
   slave_vendor = slave_config.vendor;           //getslavedesc_vendor(slave_desc);
   slave_productcode = slave_config.productcode; //getslavedesc_productcode(slave_desc,slave_typeid);
   slave_generic = int32([slave_vendor; slave_productcode]);
   [slave_smconfig,slave_pdoconfig,slave_pdoentry,valid_slave] = getslavedesc_buildopar(slave_config,0,0); //Default Configurartion 
+  getslavexdiscard(slave_desc);
 
   //Clear Channel List
   clear channel

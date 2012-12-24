@@ -60,9 +60,12 @@ try
 
     mprintf(gettext('Converting Slave Descriptions...\n')); 
     try
-        getversion('scilab');
+        v = getversion('scilab');
         // Use the Ethercat xml files for the device data.
-        devtools_run_builder(module_dir, 'slave_descriptions', 'convert_sd_xml2dat.sce');
+        if (v(1:3) * [10000;100;1]) < 50400 then       // 5.4.1 --> 50401
+            // Only need to convert for scilab < 5.4.0.
+            devtools_run_builder(module_dir, 'slave_descriptions', 'convert_sd_xml2dat.sce');
+        end
     catch:
         // The old (version < 5) way.
         // Use the EtherLab (MatLab) datafiles. 

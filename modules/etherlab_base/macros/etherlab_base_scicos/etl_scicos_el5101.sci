@@ -121,14 +121,12 @@ case 'set' then
    //Datatype Index Subindex Value
    slave_sdoconfig = int32([]);
    valid_slave = %f; //Flag for Loop handling
-   slave_desc = getslavedesc('EtherCATInfo_el5xxx');
+   slave_desc = getslavexdesc('Beckhoff EL5xxx');
 
    //Clear Channel List
    clear channel
    clear sdo
    sdoinc = 1;
-   
-
 
    //Generell SDO Configurations
    sdo(sdoinc).index = hex2dec('8000');
@@ -167,8 +165,6 @@ case 'set' then
    sdo(sdoinc).value = COUNTERRELOADVALUE;
    sdoinc = sdoinc +1;
 
-
-
    if STYP == 'EL5101' then
 	slave_revision = hex2dec('00010000');	
        	slave_type = 'EL5101';    
@@ -176,14 +172,11 @@ case 'set' then
 	numoutports = SLST+COUNTEROUTPUTPORT+LATCHOUTPUTPORT+FREQOUTPUTPORT+PERIODOUTPUTPORT+WINDOWOUTPUTPORT;
 	numinports = CONTROLINPUTPORT+PRESETINPUTPORT;
 
-
-
    	//Block Configuration
    	slave_outputs = ones(numoutports,2); //[rows input 1 colums input 1;...];
    	slave_output_types = ones(numoutports,1); //all real [Type Input 1; Type Input 2]
    	slave_inputs = ones(numinports,2);
   	slave_input_types = ones(numinports,1);
-
 
 	portno=1; //Portnumbercounter
 
@@ -313,9 +306,6 @@ case 'set' then
 
   end
 
-
-
-
    if valid_sdoconfig < 0 then
 	disp('No valid SDO Configuration');
    end;
@@ -324,13 +314,14 @@ case 'set' then
 	disp('No valid Mapping Configuration');
    end;
 
-   dev_desc = getslavedesc_checkslave(slave_desc,slave_type,slave_revision);
+   dev_desc = getslavex_checkslave(slave_desc,slave_type,slave_revision);
    if ~isempty(dev_desc) then
-    slave_config= getslavedesc_getconfig(slave_desc, dev_desc);
+    slave_config= getslavex_getconfig(slave_desc, dev_desc);
     slave_vendor = slave_config.vendor;              //getslavedesc_vendor(slave_desc);
     slave_productcode = slave_config.productcode;    //getslavedesc_productcode(slave_desc,slave_typeid);
     slave_generic = int32([slave_vendor; slave_productcode]);
     [slave_smconfig,slave_pdoconfig,slave_pdoentry,valid_slave] = getslavedesc_buildopar(slave_config,0,0); //Default Configurartion
+    getslavexdiscard(slave_desc);
    else
     disp('Can not find valid Configuration.');
    end
@@ -471,16 +462,16 @@ case 'define' then
    end;
 
   //Set Default Slave
-  slave_desc = getslavedesc('EtherCATInfo_el5xxx');	
+  slave_desc = getslavexdesc('Beckhoff EL5xxx');	
   slave_revision = hex2dec('00010000');
-  dev_desc = getslavedesc_checkslave(slave_desc,slave_type,slave_revision);
-  slave_config= getslavedesc_getconfig(slave_desc, dev_desc);   
+  dev_desc = getslavex_checkslave(slave_desc,slave_type,slave_revision);
+  slave_config= getslavex_getconfig(slave_desc, dev_desc);   
   slave_vendor = slave_config.vendor;           //getslavedesc_vendor(slave_desc);
   slave_productcode = slave_config.productcode; //getslavedesc_productcode(slave_desc,slave_typeid);
   slave_generic = int32([slave_vendor; slave_productcode]);
   [slave_smconfig,slave_pdoconfig,slave_pdoentry,valid_slave] = getslavedesc_buildopar(slave_config,0,0); //Default Configurartion 
-
-   //Index subindex vectorlength valuetype bitlength Channelno Direction TypeCode Fullrange Scale Offset
+  getslavexdiscard(slave_desc);
+  //Index subindex vectorlength valuetype bitlength Channelno Direction TypeCode Fullrange Scale Offset
   clear channel;
   portno=1; //Portnumbercounter
   //Default only Counteroutput
