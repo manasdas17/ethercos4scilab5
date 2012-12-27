@@ -1,5 +1,5 @@
 
-## Welcome to the ethercos4scilab533 wiki!
+## Welcome to the ethercos4scilab5 wiki!
 This is my personal repository to store and make available my efforts to migrate Ethercos to Scilab 5.
 
 [Ethercos](http://www.etherlab.org/en/ethercos/index.php) was created by the guys of [IgH Engineering](http://www.etherlab.org/en/who.php) (many thanks!). It is a module running under [Scicos](http://www.scicos.org/)/[Scilab](http://www.scilab.org/en) enabling scicoslab/xcos to use real hardware in the loop. The hardware is any number of EtherCAT devices, under the control of an EtherCAT master, also from IgH. 
